@@ -19,12 +19,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 //#include <stdio.h> //SWD
-#include <strings.h>
+//#include <strings.h>
 #include "NRF24.h"
 #include "NRF24_reg_addresses.h"
 
 #define PLD_SIZE 32 //payload size; 32 byte = max for nrf
-#define rx //mode
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -37,7 +36,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define DEV_ADDR 0x11 //Device number
+#define PLD_SIZE 12 //payload size; 32 = max for nrf; //ToDo: HEADER_SIZE+NUM_OF_CHANNELS
+//#define RX_NUM 6 //number of receivers
+#define HEADER_SIZE 6    //num of bytes for header
+#define NUM_OF_CHANNELS   6   //num of bytes for data
+#define DATA_START_POS 2 //Position of packet on which DMX data starts
+//#define DMXPACKET_SIZE 513 //do not change
+//#define DMX_STARTBYTE 0 //defines what startbyte the receiver listens to; 0 default for light control by standard
 
+#define AWAKE_PACKET_LENGTH 2
+#define AWAK_PACKET_PERIOD 20 //20ms by default
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,13 +74,8 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#ifdef tx
-uint8_t data_T[PLD_SIZE]={"Hello World!"};
-//uint8_t ack[PLD_SIZE];
-#else
-uint8_t data_R[PLD_SIZE];
-uint8_t ack_R[PLD_SIZE]= {"Job done!"};
-#endif
+uint8_t rx[PLD_SIZE];
+
 /*int fputc(int ch, FILE *f) {
     ITM_SendChar(ch);
     return ch;
@@ -117,15 +121,13 @@ int main(void)
   nrf24_set_channel(78);
   nrf24_set_crc(en_crc, _1byte);
   nrf24_pipe_pld_size(0, PLD_SIZE); //sets the pipe and its buffer size
+  nrf24_dpl(enable); //ToDo: Dynamic payload - think about it
   uint8_t addr[5]={0x10, 0x21, 0x32, 0x43, 0x54}; //sets the device address
-  nrf24_open_tx_pipe(addr);
+ // nrf24_open_tx_pipe(addr);
   nrf24_open_rx_pipe(0, addr);
 
-#ifdef tx
-  nrf24_stop_listen();
-#else
   nrf24_listen();
-#endif
+
 
   /* USER CODE END 2 */
 
@@ -133,24 +135,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-#ifdef tx
-	  nrf24_transmit(data_T, sizeof(data_T));
-	  HAL_Delay(1); //avoid noise
-#else
 	  nrf24_listen();
-	  if(nrf24_data_available()){
-		  nrf24_receive(data_R, sizeof(data_R));
-		  char tmp[40];
-		  sprintf(tmp, "| %s |\r\n", data_R);
-		  HAL_UART_Transmit(&huart1, tmp, strlen(tmp), 100);
-		  for(uint8_t i=0; i<sizeof(data_R); i++)
-		  	  {
-		  		  data_R[i]='\0';
-		  	  }
+	  if(nrf24_data_available())
+	  {
+		  nrf24_receive(rx, PLD_SIZE); //If payload size dynamic, data behind the dynamically set smaller payload will be nonsense
+		  if(rx[0]==DEV_ADDR&&//ToDo:...)
+		  {
+			  HAL_UART_Transmit(&huart1, rx, PLD_SIZE, 100);
+			  memset(data_R, 0, sizeof(data_R)); //deletes data in data_R
+		  }
+
 	  }
-#endif
-      //printf("Tick\n");
-      //HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
