@@ -55,12 +55,16 @@
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-
+uint16_t bpm = 164;
+uint32_t ticks_per_interrupt;
+volatile uint32_t step=0;
+volatile uint8_t nextStepFlag = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,6 +74,7 @@ static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -77,6 +82,24 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t rx[PLD_SIZE];
+
+void BPM_Set(uint16_t new_bpm) //ToDo: Rozmyslet auto reload preload -
+{
+    bpm = new_bpm;
+    float ms = 60000.0f / bpm;  //one beat in ms; (1/(bpm/60))*1000
+    ticks_per_interrupt = (uint16_t)(ms * 10.0f); // convert ms to ticks; 32-BIT TIMER -> chain two?
+    __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
+    //__HAL_TIM_SET_COUNTER(&htim2, 0);
+    //__HAL_TIM_GENERATE_EVENT(&htim2, TIM_EVENTSOURCE_UPDATE);
+}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2)
+    {
+    	nextStepFlag=1;
+    	step++;
+    }
+}
 
 /*int fputc(int ch, FILE *f) {
     ITM_SendChar(ch);
@@ -118,6 +141,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   nrf24_init();
   nrf24_tx_pwr(_0dbm);
@@ -134,9 +158,11 @@ int main(void)
 
   ARGB_Init();
   ARGB_Clear();
-  ARGB_SetBrightness(200);
-  ARGB_FillRGB(100,100,100);
   ARGB_Show();
+
+  HAL_TIM_Base_Start_IT(&htim2);
+
+  BPM_Set(328);
 
   /* USER CODE END 2 */
 
@@ -144,28 +170,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  static float BPM = 164;
-	  static float oneBeat =  1/(164*60);
-	  static ColourName_t currentColour = RED;
-	  ARGB_Clear();
-	  ARGB_FillRGB(colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b); //Its GRB
-	  ARGB_Show();
-	  HAL_Delay(1000);
-	  ARGB_Clear();
-	  ARGB_SetRGB(100, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-	  ARGB_Show();
-	  HAL_Delay(1000);
-	  ARGB_Clear();
-	  ARGB_FillWhite(100);
-	  ARGB_Show();
-	  HAL_Delay(1000);
-	  /*
-	  ARGB_FillRGB(0,255,0); //Its GRB
-	  ARGB_Show();
-	  HAL_Delay(1000);
-	  ARGB_FillRGB(255,0,0); //Its GRB
-	  ARGB_Show();
-	  HAL_Delay(1000);*/
+	  //static float BPM = 164;
+	  //static float oneBeat =  1/(164*60);
+	 static ColourName_t currentColour = BRIGHT_BLUE;
+	 if(nextStepFlag==1)
+	  {
+		 //SWITCH
+		 //case STILL
+		 //case STROBE_1/1
+		 //case STROBE_1/2
+		 //case STROBE_1/4
+		 //case STROBE_1/8
+		 //case STROBE_1/16
+		  nextStepFlag=0;
+		  if(step==1)
+		  {
+			  ARGB_FillRGB(colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			  ARGB_Show();
+			  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); //Zapne
+
+		  }
+		  else if(step>=2)
+		  {
+			  ARGB_Clear();
+			  ARGB_Show();
+			  step=0;
+			  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
+		  }
+	  }
+
 	  /*nrf24_listen();
 	  if(nrf24_data_available())
 	  {
@@ -337,6 +370,51 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 6399;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 359;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -398,11 +476,22 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, CSN_Pin|CE_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
