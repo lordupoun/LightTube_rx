@@ -44,6 +44,8 @@
 
 #define AWAKE_PACKET_LENGTH 2
 #define AWAK_PACKET_PERIOD 20 //20ms by default
+
+#define defaultPSC 6399 //Odvozeno od taktu sbernice pri zmene ABPx potreba zmenit!
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -89,6 +91,7 @@ void BPM_Set(uint16_t new_bpm) //ToDo: Rozmyslet auto reload preload -
     float ms = 60000.0f / bpm;  //one beat in ms; (1/(bpm/60))*1000
     ticks_per_interrupt = (uint16_t)(ms * 10.0f); // convert ms to ticks; 32-BIT TIMER -> chain two?
     __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
+    __HAL_TIM_SET_PRESCALER(&htim2, 6399);
     //__HAL_TIM_SET_COUNTER(&htim2, 0);
     //__HAL_TIM_GENERATE_EVENT(&htim2, TIM_EVENTSOURCE_UPDATE);
 }
@@ -161,8 +164,8 @@ int main(void)
   ARGB_Show();
 
   HAL_TIM_Base_Start_IT(&htim2);
-
-  BPM_Set(328);
+  uint32_t trueBPM=164;
+  BPM_Set(trueBPM);
 
   /* USER CODE END 2 */
 
@@ -173,30 +176,55 @@ int main(void)
 	  //static float BPM = 164;
 	  //static float oneBeat =  1/(164*60);
 	 static ColourName_t currentColour = BRIGHT_BLUE;
+	 static uint8_t newEffect = 1;
 	 if(nextStepFlag==1)
 	  {
-		 //SWITCH
+		 //SWITCH //Vypreparovat do samostatneho souboru, volat funkci animation(effect, step);
 		 //case STILL
 		 //case STROBE_1/1
 		 //case STROBE_1/2
-		 //case STROBE_1/4
+		 //case STROBE_1/4 pro ruzne varianty zmenit BPM, nebo predelat efekt?
 		 //case STROBE_1/8
 		 //case STROBE_1/16
+		 //case STROBE_1/32
+		 //case DROP
+		 switch(2)
+		 {
+		 case 1:
+			  if(step==1)
+			  {
+				  ARGB_FillRGB(colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+				  ARGB_Show();
+				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); //Zapne
+			  }
+			  else
+			  {
+				  ARGB_Clear();
+				  ARGB_Show();
+				  step=0;
+				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
+			  }
+			 break;
+		 case 2:
+			 if(newEffect==1)
+			 {
+				    float ms = (60000.0f / 164.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
+				    ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
+				    __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
+				    __HAL_TIM_SET_PRESCALER(&htim2, 14);
+				    newEffect=0;
+			 }
+			 ARGB_Clear();
+			 //ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			 ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			 ARGB_Show();
+			 //step++;
+			 //if(step>143)
+			//	 step=0;
+			 break;
+		 }
 		  nextStepFlag=0;
-		  if(step==1)
-		  {
-			  ARGB_FillRGB(colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			  ARGB_Show();
-			  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); //Zapne
 
-		  }
-		  else if(step>=2)
-		  {
-			  ARGB_Clear();
-			  ARGB_Show();
-			  step=0;
-			  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
-		  }
 	  }
 
 	  /*nrf24_listen();
