@@ -175,7 +175,7 @@ int main(void)
   {
 	  //static float BPM = 164;
 	  //static float oneBeat =  1/(164*60);
-	 static ColourName_t currentColour = BRIGHT_BLUE;
+	 static ColourName_t currentColour = BASTARD_AMBER;
 	 static uint8_t newEffect = 1;
 	 if(nextStepFlag==1)
 	  {
@@ -188,7 +188,7 @@ int main(void)
 		 //case STROBE_1/16
 		 //case STROBE_1/32
 		 //case DROP
-		 switch(2)
+		 switch(2) //each effect must start with step=0;
 		 {
 		 case 1:
 			  if(step==1)
@@ -208,7 +208,7 @@ int main(void)
 		 case 2:
 			 if(newEffect==1)
 			 {
-				    float ms = (60000.0f / 164.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
+				    float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
 				    ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
 				    __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
 				    __HAL_TIM_SET_PRESCALER(&htim2, 14);
@@ -218,11 +218,69 @@ int main(void)
 			 //ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
 			 ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
 			 ARGB_Show();
-			 //step++;
-			 //if(step>143)
-			//	 step=0;
+			 if(step>=144) //144?
+			 step=0;
 			 break;
+		 /*case 3:
+			 switch(step)
+			 {
+			 case 0:
+			         ARGB_Clear();
+			         ARGB_SetRGB(5, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 1:
+			         ARGB_Clear();
+			         ARGB_SetRGB(25, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 2:
+			         ARGB_Clear();
+			         ARGB_SetRGB(50, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 3:
+			         ARGB_Clear();
+			         ARGB_SetRGB(8, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 4:
+			         ARGB_Clear();
+			         ARGB_SetRGB(80, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 5:
+			         ARGB_Clear();
+			         ARGB_SetRGB(55, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 6:
+			         ARGB_Clear();
+			         ARGB_SetRGB(100, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         break;
+
+			     case 7:
+			         ARGB_Clear();
+			         ARGB_SetRGB(28, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
+			         ARGB_Show();
+			         step=0;
+			         break;
+			     default:
+			         step=0;
+			         break;
+
+			 }
+			 break;*/
 		 }
+
+
 		  nextStepFlag=0;
 
 	  }
