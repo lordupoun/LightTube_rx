@@ -164,7 +164,7 @@ int main(void)
   ARGB_Show();
 
   HAL_TIM_Base_Start_IT(&htim2);
-  uint32_t trueBPM=164;
+  uint32_t trueBPM=1312;
   BPM_Set(trueBPM);
 
   /* USER CODE END 2 */
@@ -175,7 +175,7 @@ int main(void)
   {
 	  //static float BPM = 164;
 	  //static float oneBeat =  1/(164*60);
-	 static ColourName_t currentColour = BASTARD_AMBER;
+	 static ColourName_t currentColour = PALE_YELLOW_GREEN;
 	 static uint8_t newEffect = 1;
 	 if(nextStepFlag==1)
 	  {
@@ -188,7 +188,7 @@ int main(void)
 		 //case STROBE_1/16
 		 //case STROBE_1/32
 		 //case DROP
-		 switch(2) //each effect must start with step=0;
+		 switch(3) //each effect must start with step=0;
 		 {
 		 case 1:
 			  if(step==1)
@@ -221,7 +221,39 @@ int main(void)
 			 if(step>=144) //144?
 			 step=0;
 			 break;
-		 /*case 3:
+		  case 3:
+				 if(newEffect==1)
+				 {
+					    //float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
+					    //ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
+					    //Obnovovacka 60Hz
+					 	__HAL_TIM_SET_AUTORELOAD(&htim2, 10457);
+					    __HAL_TIM_SET_PRESCALER(&htim2, 50);
+					    newEffect=0;
+				 }
+				 static float y = 100.0f; //initial pos; max jump height
+				 static float vy = 0.0f;
+				 static const float g = -0.03f;
+
+				 vy += g;
+				 y += vy;
+
+
+				 if (y > 143.0f) {
+				     y = 143.0f - (y - 143.0f);
+				     vy *= -1.0f;
+				 }
+				 if (y < 0.0f) {
+				     y = -y;
+				     vy *= -1.0f;
+				 }
+
+				 ARGB_Clear();
+				 ARGB_SetRGB((uint32_t)(y + 0.5f), 255, 255, 255);
+				 ARGB_Show();
+
+		 	 break;
+		  case 4:
 			 switch(step)
 			 {
 			 case 0:
@@ -277,7 +309,7 @@ int main(void)
 			         break;
 
 			 }
-			 break;*/
+			 break;
 		 }
 
 
