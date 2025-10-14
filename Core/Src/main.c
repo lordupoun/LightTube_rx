@@ -87,7 +87,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim->Instance == TIM2)
     {
     	nextStepFlag=1;
-    	step++;
+    	effects_step_iterate();
     }
 }
 
@@ -155,10 +155,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	 static ColourName_t currentColour = PALE_YELLOW_GREEN;
+	  //ToDo: check gamma
+	 static ColourName_t currentColour = PRIMARY_GREEN;
 	 if(nextStepFlag==1)
 	  {
-		  effects_set_eff(3, currentColour, 164, step);
+		  effects_set_eff(2, currentColour, 164);
 		  nextStepFlag=0;
 	  }
 
