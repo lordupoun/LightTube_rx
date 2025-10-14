@@ -21,8 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "ARGB.h"
-#include "colours.h"
+#include "effects.h"
+#include "colours.h" //ToDo: delete
 #include "NRF24.h"
 /* USER CODE END Includes */
 
@@ -45,7 +45,6 @@
 #define AWAKE_PACKET_LENGTH 2
 #define AWAK_PACKET_PERIOD 20 //20ms by default
 
-#define defaultPSC 6399 //Odvozeno od taktu sbernice pri zmene ABPx potreba zmenit!
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -63,10 +62,8 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-uint16_t bpm = 164;
-uint32_t ticks_per_interrupt;
-volatile uint32_t step=0;
-volatile uint8_t nextStepFlag = 1;
+static volatile uint32_t step=0;
+static volatile uint8_t nextStepFlag = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,18 +80,8 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t rx[PLD_SIZE];
+static uint8_t rx[PLD_SIZE];
 
-void BPM_Set(uint16_t new_bpm) //ToDo: Rozmyslet auto reload preload -
-{
-    bpm = new_bpm;
-    float ms = 60000.0f / bpm;  //one beat in ms; (1/(bpm/60))*1000
-    ticks_per_interrupt = (uint16_t)(ms * 10.0f); // convert ms to ticks; 32-BIT TIMER -> chain two?
-    __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
-    __HAL_TIM_SET_PRESCALER(&htim2, 6399);
-    //__HAL_TIM_SET_COUNTER(&htim2, 0);
-    //__HAL_TIM_GENERATE_EVENT(&htim2, TIM_EVENTSOURCE_UPDATE);
-}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
@@ -159,162 +146,20 @@ int main(void)
 
   nrf24_listen();
 
-  ARGB_Init();
-  ARGB_Clear();
-  ARGB_Show();
+  effects_init(&htim2); //before timer?
 
   HAL_TIM_Base_Start_IT(&htim2);
-  uint32_t trueBPM=1312;
-  BPM_Set(trueBPM);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //static float BPM = 164;
-	  //static float oneBeat =  1/(164*60);
 	 static ColourName_t currentColour = PALE_YELLOW_GREEN;
-	 static uint8_t newEffect = 1;
 	 if(nextStepFlag==1)
 	  {
-		 //SWITCH //Vypreparovat do samostatneho souboru, volat funkci animation(effect, step);
-		 //case STILL
-		 //case STROBE_1/1
-		 //case STROBE_1/2
-		 //case STROBE_1/4 pro ruzne varianty zmenit BPM, nebo predelat efekt?
-		 //case STROBE_1/8
-		 //case STROBE_1/16
-		 //case STROBE_1/32
-		 //case DROP
-		 switch(3) //each effect must start with step=0;
-		 {
-		 case 1:
-			  if(step==1)
-			  {
-				  ARGB_FillRGB(colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-				  ARGB_Show();
-				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); //Zapne
-			  }
-			  else
-			  {
-				  ARGB_Clear();
-				  ARGB_Show();
-				  step=0;
-				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
-			  }
-			 break;
-		 case 2:
-			 if(newEffect==1)
-			 {
-				    float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
-				    ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
-				    __HAL_TIM_SET_AUTORELOAD(&htim2, ticks_per_interrupt - 1);
-				    __HAL_TIM_SET_PRESCALER(&htim2, 14);
-				    newEffect=0;
-			 }
-			 ARGB_Clear();
-			 //ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			 ARGB_SetRGB(144-step, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			 ARGB_Show();
-			 if(step>=144) //144?
-			 step=0;
-			 break;
-		  case 3:
-				 if(newEffect==1)
-				 {
-					    //float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
-					    //ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
-					    //Obnovovacka 60Hz
-					 	__HAL_TIM_SET_AUTORELOAD(&htim2, 10457);
-					    __HAL_TIM_SET_PRESCALER(&htim2, 50);
-					    newEffect=0;
-				 }
-				 static float y = 100.0f; //initial pos; max jump height
-				 static float vy = 0.0f;
-				 static const float g = -0.03f;
-
-				 vy += g;
-				 y += vy;
-
-
-				 if (y > 143.0f) {
-				     y = 143.0f - (y - 143.0f);
-				     vy *= -1.0f;
-				 }
-				 if (y < 0.0f) {
-				     y = -y;
-				     vy *= -1.0f;
-				 }
-
-				 ARGB_Clear();
-				 ARGB_SetRGB((uint32_t)(y + 0.5f), 255, 255, 255);
-				 ARGB_Show();
-
-		 	 break;
-		  case 4:
-			 switch(step)
-			 {
-			 case 0:
-			         ARGB_Clear();
-			         ARGB_SetRGB(5, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 1:
-			         ARGB_Clear();
-			         ARGB_SetRGB(25, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 2:
-			         ARGB_Clear();
-			         ARGB_SetRGB(50, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 3:
-			         ARGB_Clear();
-			         ARGB_SetRGB(8, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 4:
-			         ARGB_Clear();
-			         ARGB_SetRGB(80, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 5:
-			         ARGB_Clear();
-			         ARGB_SetRGB(55, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 6:
-			         ARGB_Clear();
-			         ARGB_SetRGB(100, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         break;
-
-			     case 7:
-			         ARGB_Clear();
-			         ARGB_SetRGB(28, colourTable[currentColour].r, colourTable[currentColour].g, colourTable[currentColour].b);
-			         ARGB_Show();
-			         step=0;
-			         break;
-			     default:
-			         step=0;
-			         break;
-
-			 }
-			 break;
-		 }
-
-
+		  effects_set_eff(3, currentColour, 164, step);
 		  nextStepFlag=0;
-
 	  }
 
 	  /*nrf24_listen();

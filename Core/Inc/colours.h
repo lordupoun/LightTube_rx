@@ -11,7 +11,6 @@
 #include <stdint.h>
 
 typedef uint8_t ColourName_t;
-
 enum {
     BASTARD_AMBER = 0,
     MEDIUM_AMBER,
