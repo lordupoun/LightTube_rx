@@ -47,7 +47,7 @@ void effects_set_bpm(uint16_t new_bpm) //ToDo: Rozmyslet auto reload preload -
 //ToDo:!!remove effect, currentColour, bpm - variables that doesn't need to be passed each timer cycle (we will know if they change)
 void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 {
-	static ColourName_t secondColour = PRIMARY_GREEN;
+	static ColourName_t secondColour = PRIMARY_RED;
 	//stepLocal=step;
 //SWITCH //Vypreparovat do samostatneho souboru, volat funkci animation(effect, step);
 		 //case STILL
@@ -76,40 +76,51 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
 			  }
 			 break;
-		 case 2: //ToDo: overflow can happen due to float low resolution?
+		 case 2: //Faster; but float can overflow -> creates visual artefact; but it won't happen under approx. 100 000 steps
+			 static uint8_t colourMaxStep=132; //defines a step, where colour stops changing; maximum is maxAnimationSteps-1
 			 static float colourChangeVector[3];
 			 static float currentColourChanged[3];
 			 if(newEffect==1)
 			 {
-				    float ms = (60.0f / 41.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
+				    float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
 				    ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
 				    __HAL_TIM_SET_AUTORELOAD(htimLocal, ticks_per_interrupt - 1);
 				    __HAL_TIM_SET_PRESCALER(htimLocal, 14);
 
-					colourChangeVector[0]=(colourTable[secondColour].r-colourTable[currentColour].r)/(132.0f); //144-1 = max step count step count
-					colourChangeVector[1]=(colourTable[secondColour].g-colourTable[currentColour].g)/(132.0f);
-					colourChangeVector[2]=(colourTable[secondColour].b-colourTable[currentColour].b)/(132.0f);
+					colourChangeVector[0]=(colourTable[secondColour].r-colourTable[currentColour].r)/(float)colourMaxStep; //144-1 = max step count step count
+					colourChangeVector[1]=(colourTable[secondColour].g-colourTable[currentColour].g)/(float)colourMaxStep;
+					colourChangeVector[2]=(colourTable[secondColour].b-colourTable[currentColour].b)/(float)colourMaxStep;
 
-				 	currentColourChanged[0]=colourTable[currentColour].r;
+				 	currentColourChanged[0]=colourTable[currentColour].r; //A: faster to compute
 				 	currentColourChanged[1]=colourTable[currentColour].g;
 				 	currentColourChanged[2]=colourTable[currentColour].b;
 
 				    newEffect=0;
 			 }
-
-			 currentColourChanged[0]+=colourChangeVector[0]; //faster to compute
-			 currentColourChanged[1]+=colourChangeVector[1];
-			 currentColourChanged[2]+=colourChangeVector[2];
-
-			 //currentColourChanged[0] = colourTable[currentColour].r + step * colourChangeVector[0]; //more precise
+			 if(step!=0) //displays the original primary colour at least once
+			 {
+				 if(step<colourMaxStep)
+				 {
+					 currentColourChanged[0]+=colourChangeVector[0]; //A: faster to compute
+					 currentColourChanged[1]+=colourChangeVector[1];
+					 currentColourChanged[2]+=colourChangeVector[2];
+				 }
+				 else
+				 {
+					 currentColourChanged[0]=colourTable[secondColour].r;
+					 currentColourChanged[1]=colourTable[secondColour].g;
+					 currentColourChanged[2]=colourTable[secondColour].b;
+				 }
+			 }
+			 //currentColourChanged[0] = colourTable[currentColour].r + step * colourChangeVector[0]; //B: more precise
 			 //currentColourChanged[1] = colourTable[currentColour].g + step * colourChangeVector[1];
 			 //currentColourChanged[2] = colourTable[currentColour].b + step * colourChangeVector[2];
 
 			 ARGB_Clear();
 			 ARGB_SetRGB(144-step,
-			 (uint8_t)fminf(fmaxf((currentColourChanged[0]+0.5f), 0.0f), 255.0f), //clamps are note neccessary if steps of colours = animation steps -1
-			 (uint8_t)fminf(fmaxf((currentColourChanged[1]+0.5f), 0.0f), 255.0f), //but animation t
-			 (uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));
+			 (uint8_t)currentColourChanged[0]+0.5f, //ToDo: Add clamps - there can be blinking due to float inconsitency, or colourMaxStep-1
+			 (uint8_t)currentColourChanged[1]+0.5f, //0.5f smooth round
+			 (uint8_t)currentColourChanged[2]+0.5f);//(uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));
 			 //ARGB_SetRGB(144-step, (uint8_t)(currentColourChanged[0]), (uint8_t)(currentColourChanged[1]), (uint8_t)(currentColourChanged[2]));
 			 ARGB_SetWhite(144-step, colourTable[currentColour].w);
 			 ARGB_Show();
@@ -121,6 +132,53 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 			 	 currentColourChanged[2]=colourTable[currentColour].b;
 			 }
 			 break;
+		 /*case 2: //Safer
+		 			 static uint8_t colourMaxStep=132; //defines a step, where colour stops changing; maximum is maxAnimationSteps-1
+		 			 static float colourChangeVector[3];
+		 			 static float currentColourChanged[3];
+		 			 if(newEffect==1)
+		 			 {
+		 				    float ms = (60.0f / 82.0f)/144.0f;  //one beat in ms divided by LEDCOUNT; (1/(bpm/60))*1000/144
+		 				    ticks_per_interrupt = (uint16_t)((ms * 64000000.0f)/(14+1)); // convert ms to ticks; 32-BIT TIMER -> chain two?
+		 				    __HAL_TIM_SET_AUTORELOAD(htimLocal, ticks_per_interrupt - 1);
+		 				    __HAL_TIM_SET_PRESCALER(htimLocal, 14);
+
+		 					colourChangeVector[0]=(colourTable[secondColour].r-colourTable[currentColour].r)/(float)colourMaxStep; //144-1 = max step count step count
+		 					colourChangeVector[1]=(colourTable[secondColour].g-colourTable[currentColour].g)/(float)colourMaxStep;
+		 					colourChangeVector[2]=(colourTable[secondColour].b-colourTable[currentColour].b)/(float)colourMaxStep;
+
+		 				 	currentColourChanged[0]=colourTable[currentColour].r; //A: faster to compute
+		 				 	currentColourChanged[1]=colourTable[currentColour].g;
+		 				 	currentColourChanged[2]=colourTable[currentColour].b;
+
+		 				    newEffect=0;
+		 			 }
+		 			 if(step!=0) //displays the original primary colour at least once
+		 			 {
+		 					 currentColourChanged[0]+=colourChangeVector[0]; //A: faster to compute
+		 					 currentColourChanged[1]+=colourChangeVector[1];
+		 					 currentColourChanged[2]+=colourChangeVector[2];
+		 			 }
+		 			 //currentColourChanged[0] = colourTable[currentColour].r + step * colourChangeVector[0]; //B: more precise
+		 			 //currentColourChanged[1] = colourTable[currentColour].g + step * colourChangeVector[1];
+		 			 //currentColourChanged[2] = colourTable[currentColour].b + step * colourChangeVector[2];
+
+		 			 ARGB_Clear();
+		 			 ARGB_SetRGB(144-step,
+		 			 (uint8_t)fminf(fmaxf((currentColourChanged[0]+0.5f), 0.0f), 255.0f), //ToDo: Add clamps - there can be blinking due to float inconsitency, or colourMaxStep-1
+		 			 (uint8_t)fminf(fmaxf((currentColourChanged[1]+0.5f), 0.0f), 255.0f), //0.5f smooth round
+		 			 (uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));;//(uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));
+		 			 //ARGB_SetRGB(144-step, (uint8_t)(currentColourChanged[0]), (uint8_t)(currentColourChanged[1]), (uint8_t)(currentColourChanged[2]));
+		 			 ARGB_SetWhite(144-step, colourTable[currentColour].w);
+		 			 ARGB_Show();
+		 			 if(step>=144)
+		 			 {
+		 				 step=0;
+		 			 	 currentColourChanged[0]=colourTable[currentColour].r;
+		 			 	 currentColourChanged[1]=colourTable[currentColour].g;
+		 			 	 currentColourChanged[2]=colourTable[currentColour].b;
+		 			 }
+		 			 break;*/
 		  case 3:
 
 				 if(newEffect==1)

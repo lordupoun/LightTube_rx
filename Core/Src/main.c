@@ -156,7 +156,7 @@ int main(void)
   while (1)
   {
 	  //ToDo: check gamma
-	 static ColourName_t currentColour = BASTARD_AMBER;
+	 static ColourName_t currentColour = PRIMARY_GREEN;
 	 if(nextStepFlag==1)
 	  {
 		  effects_set_eff(2, currentColour, 164);
