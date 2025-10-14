@@ -5,6 +5,7 @@
  *      Author: Vilem Broucek
  */
 #include "effects.h"
+#include "math.h"
 
 static uint16_t bpm = 82;
 static uint8_t newEffect = 0;
@@ -46,7 +47,7 @@ void effects_set_bpm(uint16_t new_bpm) //ToDo: Rozmyslet auto reload preload -
 //ToDo:!!remove effect, currentColour, bpm - variables that doesn't need to be passed each timer cycle (we will know if they change)
 void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 {
-	static ColourName_t secondColour = PRIMARY_RED;
+	static ColourName_t secondColour = PRIMARY_GREEN;
 	//stepLocal=step;
 //SWITCH //Vypreparovat do samostatneho souboru, volat funkci animation(effect, step);
 		 //case STILL
@@ -85,9 +86,9 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 				    __HAL_TIM_SET_AUTORELOAD(htimLocal, ticks_per_interrupt - 1);
 				    __HAL_TIM_SET_PRESCALER(htimLocal, 14);
 
-					colourChangeVector[0]=(colourTable[secondColour].r-colourTable[currentColour].r)/(144); //144 = step count
-					colourChangeVector[1]=(colourTable[secondColour].g-colourTable[currentColour].g)/(144);
-					colourChangeVector[2]=(colourTable[secondColour].b-colourTable[currentColour].b)/(144);
+					colourChangeVector[0]=(colourTable[secondColour].r-colourTable[currentColour].r)/(132.0f); //144-1 = max step count step count
+					colourChangeVector[1]=(colourTable[secondColour].g-colourTable[currentColour].g)/(132.0f);
+					colourChangeVector[2]=(colourTable[secondColour].b-colourTable[currentColour].b)/(132.0f);
 
 				 	currentColourChanged[0]=colourTable[currentColour].r;
 				 	currentColourChanged[1]=colourTable[currentColour].g;
@@ -96,12 +97,19 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm)
 				    newEffect=0;
 			 }
 
-			 currentColourChanged[0]+=colourChangeVector[0];
+			 currentColourChanged[0]+=colourChangeVector[0]; //faster to compute
 			 currentColourChanged[1]+=colourChangeVector[1];
 			 currentColourChanged[2]+=colourChangeVector[2];
 
+			 //currentColourChanged[0] = colourTable[currentColour].r + step * colourChangeVector[0]; //more precise
+			 //currentColourChanged[1] = colourTable[currentColour].g + step * colourChangeVector[1];
+			 //currentColourChanged[2] = colourTable[currentColour].b + step * colourChangeVector[2];
+
 			 ARGB_Clear();
-			 ARGB_SetRGB(144-step, (uint8_t)(currentColourChanged[0]+0.5f), (uint8_t)(currentColourChanged[1]+0.5f), (uint8_t)(currentColourChanged[2]+0.5f));
+			 ARGB_SetRGB(144-step,
+			 (uint8_t)fminf(fmaxf((currentColourChanged[0]+0.5f), 0.0f), 255.0f), //clamps are note neccessary if steps of colours = animation steps -1
+			 (uint8_t)fminf(fmaxf((currentColourChanged[1]+0.5f), 0.0f), 255.0f), //but animation t
+			 (uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));
 			 //ARGB_SetRGB(144-step, (uint8_t)(currentColourChanged[0]), (uint8_t)(currentColourChanged[1]), (uint8_t)(currentColourChanged[2]));
 			 ARGB_SetWhite(144-step, colourTable[currentColour].w);
 			 ARGB_Show();
