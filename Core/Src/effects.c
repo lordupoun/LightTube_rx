@@ -7,6 +7,8 @@
 #include "effects.h"
 #include "math.h"
 
+#define LEDCOUNT 144
+
 static uint16_t bpm = 82;
 static uint8_t newEffect = 0;
 static uint32_t ticks_per_interrupt;
@@ -16,6 +18,9 @@ static uint32_t step;
 void effects_step_iterate() {
 	step++;
 }
+
+//CurrentStep je globalni
+void coulour_change(uint32_t maxStep)
 
 void effects_init(TIM_HandleTypeDef *htim) {
 	htimLocal = htim;
@@ -68,7 +73,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 
 			newEffect = 0;
 		}
-	case 1:
+	case 1: //Show color
 		if (newEffect == 1)
 		{
 			__HAL_TIM_SET_AUTORELOAD(htimLocal, 30000);
@@ -82,7 +87,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 				colourTable[currentColour].b);
 		ARGB_FillWhite(colourTable[currentColour].w);
 		ARGB_Show();
-	case 1:
+	case 1: //Strobe
 		if (step == 1) {
 			ARGB_FillRGB(
 					colourTable[currentColour].r,
@@ -139,12 +144,12 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 		//currentColourChanged[2] = colourTable[currentColour].b + step * colourChangeVector[2];
 		ARGB_Clear();
 		ARGB_SetRGB(
-				144 - step,
+				LEDCOUNT - step,
 				(uint8_t) currentColourChanged[0] + 0.5f, //ToDo: Add clamps - there can be blinking due to float inconsitency, or colourMaxStep-1
 				(uint8_t) currentColourChanged[1] + 0.5f, //0.5f smooth round
 				(uint8_t) currentColourChanged[2] + 0.5f); //(uint8_t)fminf(fmaxf((currentColourChanged[2]+0.5f), 0.0f), 255.0f));
 		ARGB_SetWhite(
-				144 - step,
+				LEDCOUNT - step,
 				colourTable[currentColour].w);
 		ARGB_Show();
 		if (step >= 144)
@@ -291,11 +296,9 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 
 			newEffect = 0;
 		}
-
 		phase += phaseInc;
 		if (phase > 2.0f * M_PI)
 			phase -= 2.0f * M_PI;
-
 		y = 0.5f * H * (1.0f - cosf(phase));
 
 		ARGB_Clear();
