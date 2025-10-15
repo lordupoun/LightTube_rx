@@ -159,7 +159,7 @@ int main(void)
 	 static ColourName_t currentColour = PRIMARY_GREEN;
 	 if(nextStepFlag==1)
 	  {
-		  effects_set_eff(2, currentColour, 164);
+		  effects_set_eff(5, currentColour, 164);
 		  nextStepFlag=0;
 	  }
 
