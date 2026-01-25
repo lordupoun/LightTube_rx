@@ -20,7 +20,7 @@ void effects_step_iterate() {
 }
 
 //CurrentStep je globalni
-void coulour_change(uint32_t maxStep)
+//void coulour_change(uint32_t maxStep)
 
 void effects_init(TIM_HandleTypeDef *htim) {
 	htimLocal = htim;
@@ -87,7 +87,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 				colourTable[currentColour].b);
 		ARGB_FillWhite(colourTable[currentColour].w);
 		ARGB_Show();
-	case 1: //Strobe
+	case 2: //Strobe
 		if (step == 1) {
 			ARGB_FillRGB(
 					colourTable[currentColour].r,
@@ -103,7 +103,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 			//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); //vypne
 		}
 		break;
-	case 2: //Faster; but float can overflow -> creates visual artefact; but it won't happen under approx. 100 000 steps
+	case 3: //Faster; but float can overflow -> creates visual artefact; but it won't happen under approx. 100 000 steps
 		static uint8_t colourMaxStep = 132; //defines a step, where colour stops changing; maximum is maxAnimationSteps-1
 		static float colourChangeVector[3];
 		static float currentColourChanged[3];
@@ -207,7 +207,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 		 currentColourChanged[2]=colourTable[currentColour].b;
 		 }
 		 break;*/
-	case 3: //Jumpin - physics - No tempo
+	case 4: //Jumpin - physics - No tempo
 		if (newEffect == 1)
 		{
 			//ToDo: Correct refresh rate; 120Hz
@@ -239,7 +239,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 				colourTable[currentColour].g, colourTable[currentColour].b); //rounds and casts to int
 		ARGB_Show();
 		break;
-	case 4: //Jumping - goniometric
+	case 5: //Jumping - goniometric
 	{
 
 		static const float H = 100.0f;
@@ -274,7 +274,7 @@ void effects_set_eff(uint16_t effect, ColourName_t currentColour, uint16_t bpm) 
 		ARGB_Show();
 	}
 		break;
-	case 5: //Jumping - complete
+	case 6: //Jumping - complete
 	{
 
 		static const float H = 143.0f;

@@ -35,7 +35,7 @@ void SI44_Write(uint8_t reg, uint8_t * buf, uint8_t length)
 }
 
 //Not working
-void SI44_Read_IT(uint8_t reg, uint8_t * buf, uint8_t length)
+/*void SI44_Read_IT(uint8_t reg, uint8_t * buf, uint8_t length)
 {
 	//addreses range of SI is only 7 bit 0b0xxxxxxx/0b1xxxxxxx -> MSB 8bit defines whether its read from register or write to register operation
 	//reg = reg & 0b01111111; //makes sure its read operation, not nessesarry; predano hodnotou, muzu menit
@@ -51,22 +51,22 @@ void SI44_Read_IT(uint8_t reg, uint8_t * buf, uint8_t length)
 
 
     HAL_SPI_Receive_IT(spi_interface, si44_read_buf, si44_read_length);
-}
+}*/
 
 //Not working
-void SI44_Write_IT(uint8_t reg, uint8_t * buf, uint8_t length)
+/*void SI44_Write_IT(uint8_t reg, uint8_t * buf, uint8_t length)
 {
     /*static uint8_t b[length + 1]; //ToDo: allocate non variable; ToDo: memcpy
     b[0] = reg | 0b10000000; //write operation; (MSB=0 mean read)
     memcpy(&b[1], buf, length);
     HAL_GPIO_WritePin(nss_port, nss_pin, GPIO_PIN_RESET);
-    HAL_SPI_Transmit_IT(spi_interface, b, length + 1);*/
+    HAL_SPI_Transmit_IT(spi_interface, b, length + 1);*//*
     si44_tx_buf[0] = reg | 0b10000000;
     memcpy(&si44_tx_buf[1], buf, length);
 
     HAL_GPIO_WritePin(nss_port, nss_pin, GPIO_PIN_RESET);
     HAL_SPI_Transmit_IT(spi_interface, si44_tx_buf, length + 1);
-}
+}*/
 
 void SI44_IO_Init(SPI_HandleTypeDef * hspi, GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 {

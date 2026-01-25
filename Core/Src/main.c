@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "si4432.h"
 #include "effects.h"
 #include "colours.h" //ToDo: delete
 /* USER CODE END Includes */
@@ -79,7 +80,9 @@ static void MX_SPI2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static bool rxDoneFlag=false;
 static uint8_t rx[PLD_SIZE];
+static uint8_t dataPacket[1][6];
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -90,11 +93,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
-/*int fputc(int ch, FILE *f) {
-    ITM_SendChar(ch);
-    return ch;
-}*/
+//---RF EXTI Callback---
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	//EXTI for RF module (SI4432)
+	if (GPIO_Pin == GPIO_PIN_11)
+	{
+    	uint8_t b; //jen pro reset 0x03 registru
+    	SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
+    	SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 
+        rxDoneFlag=true; //ToDo: přidat čtecí
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -134,24 +145,59 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 
+  //---SI4432---
+  SI44_Init(&hspi2, GPIOB, GPIO_PIN_12);
+  HAL_Delay(5000); //ToDo: zkratit
+  SI44_PresetConfig();
+  SI44_SetAGCMode(0b00100000); //6th bit - sgin
+  SI44_SetInterrupts1(0b00000010); //1st bit = CRC error
+  SI44_SetInterrupts2(0b00000000);
+  SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
+  HAL_Delay(500);
+  SI44_SetRXon();
 
+  //---ARGB effects---
   effects_init(&htim2); //before timer?
+  //ARGB_Init();
+  //ARGB_Clear();
+  //ARGB_Clear();
+  //ARGB_Show();
 
   HAL_TIM_Base_Start_IT(&htim2);
+
+  uint8_t testPacket[64];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //ToDo: check gamma
+	  //Recieving only applies when data changes - included in transmitter code
+	  if(rxDoneFlag==1)
+	  {
+		  SI44_ReadPacket(testPacket);
+		  ARGB_SetBrightness(255);
+		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
+		  ARGB_Show();
+		  rxDoneFlag=0;
+	  }
+	  /*ARGB_SetBrightness(255);
+	  ARGB_FillRGB(255, 0, 0);
+	  ARGB_Show();
+	  HAL_Delay(1000);
+	  ARGB_SetBrightness(255);
+	  	  ARGB_FillRGB(0,255, 0);
+	  	  ARGB_Show();
+	  	HAL_Delay(1000);
+	*/
+	 /* //ToDo: check gamma
 	 static ColourName_t currentColour = PRIMARY_GREEN;
 	 if(nextStepFlag==1)
 	  {
 		  effects_set_eff(5, currentColour, 164);
 		  nextStepFlag=0;
 	  }
-
+	 */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -438,7 +484,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : SPI2_IRQ_Pin */
   GPIO_InitStruct.Pin = SPI2_IRQ_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SPI2_IRQ_GPIO_Port, &GPIO_InitStruct);
 
