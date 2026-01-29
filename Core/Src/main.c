@@ -179,7 +179,16 @@ int main(void)
 		  ARGB_SetBrightness(255);
 		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
 		  ARGB_Show();
+
+		  char uartBuf[50];  // dostatečně velký buffer
+		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[0], testPacket[1], testPacket[2]);
+		  HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
+
+
+
 		  rxDoneFlag=0;
+
+		  //HAL_Delay(10);
 	  }
 	  /*ARGB_SetBrightness(255);
 	  ARGB_FillRGB(255, 0, 0);
@@ -418,7 +427,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 250000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
