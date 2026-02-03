@@ -175,8 +175,11 @@ int main(void)
 	  //Recieving only applies when data changes - included in transmitter code
 	  if(rxDoneFlag==1)
 	  {
+
 		  SI44_ReadPacket(testPacket);
-		  ARGB_SetBrightness(255);
+		  //ARGB_SetBrightness(255);
+		  //ARGB_Clear();
+		  //ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
 		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
 		  ARGB_Show();
 
