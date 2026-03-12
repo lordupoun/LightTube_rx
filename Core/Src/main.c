@@ -89,7 +89,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim->Instance == TIM2)
     {
     	nextStepFlag=1;
-    	effects_step_iterate();
     }
 }
 
@@ -166,14 +165,22 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
+  effects_set_effect(10,60);
+  //ARGB_Clear();
+  //ARGB_FillRGB(255, 255, 0);
+  //ARGB_Show();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  /*ARGB_Clear();
+	  ARGB_FillRGB(255, 255, 0);
+	  ARGB_Show();
+	  HAL_Delay(1000);*/
 	  //Recieving only applies when data changes - included in transmitter code
-	  if(rxDoneFlag==1)
+	  /*if(rxDoneFlag==1)
 	  {
 
 		  SI44_ReadPacket(testPacket);
@@ -192,7 +199,7 @@ int main(void)
 		  rxDoneFlag=0;
 
 		  //HAL_Delay(10);
-	  }
+	  }*/
 	  /*ARGB_SetBrightness(255);
 	  ARGB_FillRGB(255, 0, 0);
 	  ARGB_Show();
@@ -202,14 +209,14 @@ int main(void)
 	  	  ARGB_Show();
 	  	HAL_Delay(1000);
 	*/
-	 /* //ToDo: check gamma
-	 static ColourName_t currentColour = PRIMARY_GREEN;
+	  //ToDo: check gamma
+	 //static ColourName_t currentColour = PRIMARY_BLUE;
 	 if(nextStepFlag==1)
 	  {
-		  effects_set_eff(5, currentColour, 164);
+		  effects_next_step();
 		  nextStepFlag=0;
 	  }
-	 */
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
