@@ -51,6 +51,6 @@ typedef struct {
     uint8_t r, g, b, w;
 } ColourRGB_t;
 
-extern const ColourRGB_t colourTable[COLOUR_COUNT];
+extern const ColourRGB_t colourTable[256];
 
 #endif /* INC_COLOURS_H_ */

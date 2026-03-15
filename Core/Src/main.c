@@ -146,13 +146,13 @@ int main(void)
 
   //---SI4432---
   SI44_Init(&hspi2, GPIOB, GPIO_PIN_12);
-  HAL_Delay(5000); //ToDo: zkratit
+  //HAL_Delay(5000); //ToDo: zkratit
   SI44_PresetConfig();
   SI44_SetAGCMode(0b00100000); //6th bit - sgin
   SI44_SetInterrupts1(0b00000010); //1st bit = CRC error
   SI44_SetInterrupts2(0b00000000);
   SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
-  HAL_Delay(500);
+  //HAL_Delay(500);
   SI44_SetRXon();
 
   //---ARGB effects---
@@ -165,7 +165,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
-  effects_set_effect(10,60);
+  effects_set_effect(22,197);
   //ARGB_Clear();
   //ARGB_FillRGB(255, 255, 0);
   //ARGB_Show();
