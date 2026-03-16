@@ -165,7 +165,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
-  effects_set_effect(22,197);
+  effects_set_effect(38,0);
   //ARGB_Clear();
   //ARGB_FillRGB(255, 255, 0);
   //ARGB_Show();
