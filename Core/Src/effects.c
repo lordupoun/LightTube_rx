@@ -444,8 +444,9 @@ static void effect_strobe_fading(void) //PREDELAT TAK ABY VYPADAL GRAFICKY HEZKY
 	}
     if(step>0&&step<15)
     {
+
     	brightness=brightness+17;
-        ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+        ARGB_FillRGB((colourTable[primaryColour].r*brightness)/255, (colourTable[primaryColour].g*brightness)/255, (colourTable[primaryColour].b*brightness)/255);
         ARGB_FillWhite(colourTable[primaryColour].w);
         ARGB_Show();
     }
