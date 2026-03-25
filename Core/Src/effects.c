@@ -14,12 +14,13 @@
 #include <stdlib.h> // Nutné pro funkci rand()
 
 #define LEDCOUNT 144
+#define TUBENUMBER 1
 #define MCU_CLOCK 72000000.0f
 
 static TIM_HandleTypeDef *htimLocal;
 static uint16_t bpm = 164;
 static ColourName_t primaryColour = 233; //20
-static ColourName_t secondaryColour = 120; //102
+static ColourName_t secondaryColour = 102; //102
 static uint32_t step = 0;
 //static uint8_t is_new_effect = 0;
 //static uint8_t brightness=255;
@@ -31,6 +32,7 @@ static uint16_t modifier = 1; //defines the variation of an animation
 
 static uint8_t colourChanged = 0; //for effects that has to recalculate the influence of colour change (gradients, etc.)
 static uint8_t ownTempo=0;  	  //for effects that use fixed individual refresh rate
+static uint8_t modifier2=0;
 
 void effects_init(TIM_HandleTypeDef *htim)
 {
@@ -1325,7 +1327,7 @@ static void effect_slide_top(void)
         ARGB_Clear();
 	}
 	limit=(uint16_t)(((float)LEDCOUNT/((float)modifier-1))*step);
-	for(uint16_t i=LEDCOUNT-1; i>LEDCOUNT-limit; i--)
+	for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 	{
 		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
 		ARGB_SetWhite(i,colourTable[primaryColour].w);
@@ -1353,7 +1355,7 @@ static void effect_slide_backAndForth_special(void) //ToDo: Double colour - seco
 	}
 	else
 	{
-		for(uint16_t i=143; i>144-limit; i--)
+		for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 		{
 			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
 			ARGB_SetWhite(i,colourTable[secondaryColour].w);
@@ -1383,7 +1385,7 @@ static void effect_slide_backAndForth(void) //ToDo: Double colour - second colou
 	}
 	else
 	{
-		for(uint16_t i=143; i>144-limit; i--)
+		for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 		{
 			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
 			ARGB_SetWhite(i,colourTable[secondaryColour].w);
@@ -1448,7 +1450,7 @@ static void effect_middle(void)
 
     ARGB_Show();
 }*/
-static void effect_fromMiddle(void) //ToDo: Double colour - second colour can be zero
+static void effect_fromMiddle(void)
 {
 	uint16_t limit;
 	if(step>modifier-1)
@@ -1456,33 +1458,62 @@ static void effect_fromMiddle(void) //ToDo: Double colour - second colour can be
         step=0;
         ARGB_Clear();
 	}
-	limit=(uint16_t)((144.0f/((float)modifier-1))*step);
-	for(uint16_t i=73; i<limit; i++)
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+    for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+    {
+    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+    }
+    for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+    {
+    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    }
+	ARGB_Show();
+}
+static void effect_fromMiddle_trueZero(void) //DIMS COMPLETELY IN ZERO
+{
+	uint16_t limit;
+	if(step>modifier-1)
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+        step=0;
+        ARGB_Clear();
 	}
-	for(uint16_t i=72; i>144-limit; i--)
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(step>0) //ToDo: Can be moved into own function
 	{
-		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
 	}
 	ARGB_Show();
 }
-static void effect_fromMiddle_dim(void) //ToDo: Double colour - second colour can be zero
+static void effect_fromMiddle_dim(void)
 {
 	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
         step=0;
-        direction = !direction;
+        direction=!direction;
         //ARGB_Clear();
 	}
-	limit=(uint16_t)((144.0f/((float)modifier-1))*step);
-	if(direction==1)
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0) //ToDo: Can be moved into own function
 	{
-		for(uint16_t i=0; i<limit; i++)
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
 			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
 			ARGB_SetWhite(i,colourTable[primaryColour].w);
@@ -1490,7 +1521,92 @@ static void effect_fromMiddle_dim(void) //ToDo: Double colour - second colour ca
 	}
 	else
 	{
-		for(uint16_t i=143; i>144-limit; i--)
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+	}
+	ARGB_Show();
+}
+static void effect_fromMiddle_dim_special(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        if(modifier2==true)
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+	}
+	else
+	{
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+	}
+	ARGB_Show();
+}
+
+static void effect_fromMiddle_dim_special2(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+	}
+	else
+	{
+		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
 			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
 			ARGB_SetWhite(i,colourTable[secondaryColour].w);
@@ -1499,7 +1615,434 @@ static void effect_fromMiddle_dim(void) //ToDo: Double colour - second colour ca
 	ARGB_Show();
 }
 
-static void effect_middle(void) //ALTERNATIVNI //ToDo: Fix math
+static void effect_fromEdge(void)
+{
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step)+1;
+	//if(step>0) //ToDo: Can be moved into own function
+	//{
+    for(uint16_t i=0; i<limit; i++)
+    {
+    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+    }
+    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+    {
+    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    }
+	//}
+	ARGB_Show();
+}
+
+static void effect_fromEdge_trueZero(void)
+{
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step)+1;
+	if(step>0) //ToDo: Can be moved into own function
+	{
+		for(uint16_t i=0; i<limit; i++)
+		{
+			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			ARGB_SetWhite(i,colourTable[primaryColour].w);
+		}
+		for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+		{
+			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+		}
+	}
+	ARGB_Show();
+}
+
+static void effect_fromEdge_dim(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        //ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step)+1;
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	}
+	else
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	ARGB_Show();
+}
+
+static void effect_fromEdge_backAndForth_special(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	else
+	{
+	    for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	ARGB_Show();
+}
+static void effect_fromEdge_backAndForth(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        if(modifier2==1)
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	}
+	else
+	{
+	    for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	    for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	ARGB_Show();
+}
+
+
+static void effect_fromEdge_dim_special(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        if(modifier2==true)
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step)+1;
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	else
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	}
+	ARGB_Show();
+}
+
+static void effect_fromEdge_dim_special2(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+        ARGB_Clear();
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step)+1;
+	if(direction==0) //ToDo: Can be moved into own function
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    }
+	}
+	else
+	{
+	    for(uint16_t i=0; i<limit; i++)
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    {
+	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    }
+	}
+	ARGB_Show();
+}
+
+static void effect_twoDrops_fromEdge(void)
+{
+	uint16_t limit;
+	ARGB_Clear();
+	if(step>modifier-1)
+	{
+        step=0;
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+    ARGB_SetRGB(limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+    ARGB_SetWhite(limit,colourTable[primaryColour].w);
+    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+	ARGB_Show();
+}
+static void effect_twoDrops_buggy(void)
+{
+	uint16_t limit;
+	ARGB_Clear();
+	if(step>modifier-1)
+	{
+        step=0;
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
+    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+	ARGB_Show();
+}
+static void effect_twoDrops_fromMiddle(void)
+{
+	uint16_t limit;
+	ARGB_Clear();
+	if(step>modifier-1)
+	{
+        step=0;
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
+    ARGB_SetRGB(72+limit-1,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+    ARGB_SetWhite(72+limit-1,colourTable[secondaryColour].w);
+	ARGB_Show();
+}
+static void effect_twoDrops_backAndForth(void)
+{
+	static uint8_t direction=0;
+	uint16_t limit;
+	ARGB_Clear();
+	if(step>modifier-1)
+	{
+        step=0;
+        direction=!direction;
+	}
+	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	if(direction==0)
+	{
+	    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
+	    ARGB_SetRGB(72+limit-1,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    ARGB_SetWhite(72+limit-1,colourTable[secondaryColour].w);
+	}
+	else
+	{
+	    ARGB_SetRGB(limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+	    ARGB_SetWhite(limit,colourTable[primaryColour].w);
+	    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
+	    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+	}
+	ARGB_Show();
+}
+
+static void effect_drops(void)
+{
+	static uint16_t ticksFromStart=0;
+	//POLE s pozicema
+	static int16_t pole[20];
+	ARGB_Clear();
+	if(ticksFromStart<40&&ticksFromStart%2==0)
+	{
+		pole[ticksFromStart/2]=1;
+	}
+	for(uint8_t i=0; i<20; i++)
+	{
+		if(pole[i]!=0)
+		{
+		    ARGB_SetRGB(pole[i],colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+		    ARGB_SetWhite(pole[i],colourTable[primaryColour].w);
+		    pole[i]+=2;
+		}
+		if(pole[i]>144)
+		{
+			pole[i]=pole[i]%144;
+		}
+	}
+	ARGB_Show();
+	if(ticksFromStart<41) //prevents overflow
+	ticksFromStart++;
+}
+
+static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svitit, vymyslet vic efektu
+{
+	if(step>3)
+	{
+		step=0;
+	}
+	ARGB_Clear();
+	switch(TUBENUMBER)
+	{
+	case 3 ... 4:
+			if(step==0||step==1)
+			{
+			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			    ARGB_FillWhite(colourTable[primaryColour].w);
+			}
+		break;
+	case 2:
+	case 5:
+			if(step==2)
+			{
+			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			    ARGB_FillWhite(colourTable[primaryColour].w);
+			}
+		break;
+	case 1:
+	case 6:
+			if(step==3)
+			{
+			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+			    ARGB_FillWhite(colourTable[primaryColour].w);
+			}
+		break;
+	}
+	ARGB_Show();
+}
+
+static void effect_tubes_pingpong(void)
+{
+    if(step > 3) {
+        step = 0;
+    }
+
+    ARGB_Clear();
+
+    switch(TUBENUMBER)
+    {
+        case 3 ... 4:
+            if(step == 0)
+            {
+                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+                ARGB_FillWhite(colourTable[primaryColour].w);
+            }
+            break;
+        case 2:
+        case 5:
+            if(step == 1 || step == 3)
+            {
+                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+                ARGB_FillWhite(colourTable[primaryColour].w);
+            }
+            break;
+        case 1:
+        case 6:
+            if(step == 2)
+            {
+                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+                ARGB_FillWhite(colourTable[primaryColour].w);
+            }
+            break;
+    }
+    ARGB_Show();
+}
+
+
+static void effect_middle(void) //ToDo: Fix math - according to fromMiddle effect! use the "limit" variable!
 {
 	if(step>modifier-1)
 	{
@@ -1527,7 +2070,7 @@ static void effect_middle(void) //ALTERNATIVNI //ToDo: Fix math
 }
 
 
-static void effect_middle_bounce1(void) //ALTERNATIVNI //ToDo: Fix math
+static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMiddle effect!
 {
 	static uint8_t direction=0;
 	if(step>modifier-1)
@@ -1577,7 +2120,7 @@ static void effect_middle_bounce1(void) //ALTERNATIVNI //ToDo: Fix math
 
 }
 
-static void effect_middle_bounce2(void)
+static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMiddle effect!
 {
 	static uint8_t direction=0;
 	if(step>63)
@@ -1727,7 +2270,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	uint16_t ARR;
     switch (effect1)
     {
-        case 0 ... 2: //LIGHTS DOWN
+        /*case 0 ... 2: //LIGHTS DOWN //--------------------------------------------------------------
             current_effect_func = effect_lights_down;
             PSC = 21972;
             multiplier = 0.1;
@@ -2067,7 +2610,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
 
             }
-            break;
+            break; */ //------------------------------------------------------------------------------------------------
          case 57 ... 58: //SECTORS BACK AND FORTH
        		current_effect_func = effect_sectors_backAndForth;
          	modifier=1;
@@ -2255,18 +2798,250 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
          	ownTempo=0;
             switch (effect2)
             {
-				case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+				case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromMiddle_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
+				case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
+				case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
+				case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
+				case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
+				case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromMiddle_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
+				case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
+				case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
+				case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+          case 71 ... 72: //ToDo: add trueZero? probably not...
+       		current_effect_func = effect_fromMiddle_dim; //can use blank second colour!
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+          case 73 ... 74: //ToDo: add trueZero?
+       		current_effect_func = effect_fromMiddle_dim_special; //Turns off after each cycle; cant use blank second colour
+         	ownTempo=0;
+         	modifier=0;
+            switch (effect2)
+            {
+				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromMiddle_dim_special2;   break; //slow continous
+				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //whole - lower res
+				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note - lower res
+				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note - large blocks
+				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromMiddle_dim_special2; break; //quarter note - mid res
+				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromMiddle_dim_special2; break; //whole note
+				case 228 ... 237:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note
+				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note
+				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromMiddle_dim_special2; break; //16
+            }
+            break;
+          case 75 ... 76:
+       		current_effect_func = effect_fromEdge;
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+				case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromEdge_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
+				case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
+				case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
+				case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
+				case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
+				case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromEdge_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
+				case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
+				case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
+				case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+          case 77 ... 78: //ToDo: add trueZero? probably not...
+       		current_effect_func = effect_fromEdge_dim; //can use blank second colour!
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+          case 79 ... 80: //ToDo: add trueZero?
+       		current_effect_func = effect_fromEdge_dim_special; //Turns off after each cycle; cant use blank second colour
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_dim_special2;   break; //slow continous
+				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //whole - lower res
+				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //half note - lower res
+				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note - large blocks
+				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_dim_special2; break; //quarter note - mid res
+				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_dim_special2; break; //whole note
+				case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //half note
+				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note
+				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_dim_special2; break; //16
+            }
+            break;
+          case 81 ... 82: //ToDo: add trueZero?
+         	  current_effect_func = effect_fromEdge_backAndForth; //Turns off after each cycle; cant use blank second colour
+          	  modifier2=0;
+          	  ownTempo=0;
+              switch (effect2)
+              {
+  				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+  				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+  				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+  				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+  				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+  				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+  				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+  				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+  				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+  				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+  				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+  				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+  				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+  				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+  				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+  				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+  				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+  				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+  				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_backAndForth_special;   break; //slow continous
+  				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //whole - lower res
+  				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note - lower res
+  				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note - large blocks
+  				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_backAndForth_special; break; //quarter note - mid res
+  				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_backAndForth_special; break; //whole note
+  				case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note
+  				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note
+  				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_backAndForth_special; break; //16
+              }
+              break;
+          case 83 ... 84: //ToDo: add trueZero?
+       		current_effect_func = effect_twoDrops_fromMiddle; //Turns off after each cycle; cant use blank second colour
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0   ... 6: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 7   ... 13: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 14  ... 20: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 21  ... 27: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 28  ... 34: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 35  ... 41: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+				case 42  ... 48: multiplier = 16; modifier=32;  PSC=137;   break; //half note
+				case 49  ... 55: multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+				case 56  ... 62: multiplier = 32; modifier=16;  PSC=69;   break; //16
+				case 63  ... 69: multiplier = 8;  modifier=128;  PSC=274;  current_effect_func = effect_twoDrops_fromEdge;   break; //slow continous
+				case 70  ... 76: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //whole - lower res
+				case 77  ... 83: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //half note - lower res
+				case 84  ... 90: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note - large blocks
+				case 91  ... 97: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_fromEdge; break; //quarter note - mid res
+				case 98  ... 104: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_fromEdge; break; //whole note
+				case 105 ... 111:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //half note
+				case 112 ... 118:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note
+				case 119 ... 125:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_fromEdge; break; //16
+				case 126 ... 132: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_backAndForth;  break; //slow continous
+				case 133 ... 139: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //whole - lower res
+				case 140 ... 146: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //half note - lower res
+				case 147 ... 153: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - large blocks
+				case 154 ... 160: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - mid res
+				case 161 ... 167: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_backAndForth; break; //whole note
+				case 168 ... 174:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_backAndForth;  break; //half note
+				case 175 ... 181:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note
+				case 182 ... 188:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_backAndForth; break; //16
+				case 189 ... 195: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_buggy;   break; //slow continous
+				case 196 ... 202: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //whole - lower res
+				case 203 ... 209: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //half note - lower res
+				case 210 ... 216: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //quarter note - large blocks
+				case 217 ... 223: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_buggy; break; //quarter note - mid res
+				case 224 ... 230: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_buggy; break; //whole note
+				case 231 ... 237:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //half note
+				case 238 ... 244:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //quarter note
+				case 245 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_buggy; break; //16
+            }
+            break;
+         case 85 ... 86: //ToDo: add trueZero? probably not...
+       		current_effect_func = effect_drops; //can use blank second colour!
+         	ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
 				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
 				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
 				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
             }
             break;
-
+          case 87 ... 88: //ToDo: add trueZero? probably not...
+       		current_effect_func = effect_tubes; //can use blank second colour!
+         	ownTempo=0;
+			multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
 
           case 51 ... 52: //STATIC RADOM
                 current_effect_func = effect_random_static;

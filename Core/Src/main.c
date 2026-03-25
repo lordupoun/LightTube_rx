@@ -176,7 +176,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
-  effects_set_effect(69,150);
+  effects_set_effect(87,57);
 
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
