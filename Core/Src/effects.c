@@ -2004,40 +2004,31 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 	ARGB_Show();
 }
 
-static void effect_tubes_pingpong(void)
+static void effect_tubes_true_pingpong(void) //AI GENERATED - only for test
 {
-    if(step > 3) {
+    if(step > 9)
+    {
         step = 0;
     }
 
     ARGB_Clear();
 
-    switch(TUBENUMBER)
+    uint8_t active_tube;
+    if (step <= 5)
     {
-        case 3 ... 4:
-            if(step == 0)
-            {
-                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-                ARGB_FillWhite(colourTable[primaryColour].w);
-            }
-            break;
-        case 2:
-        case 5:
-            if(step == 1 || step == 3)
-            {
-                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-                ARGB_FillWhite(colourTable[primaryColour].w);
-            }
-            break;
-        case 1:
-        case 6:
-            if(step == 2)
-            {
-                ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-                ARGB_FillWhite(colourTable[primaryColour].w);
-            }
-            break;
+        active_tube = step + 1;
     }
+    else
+    {
+        active_tube = 11 - step;
+    }
+
+    if (TUBENUMBER == active_tube)
+    {
+        ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
+        ARGB_FillWhite(colourTable[primaryColour].w);
+    }
+
     ARGB_Show();
 }
 
@@ -2268,77 +2259,36 @@ void effects_next_step(void)
 void effects_set_effect(uint8_t effect1, uint8_t effect2)
 {
 	uint16_t ARR;
+	ownTempo=0;
+	colourChanged=0;
     switch (effect1)
     {
-        /*case 0 ... 2: //LIGHTS DOWN //--------------------------------------------------------------
+        case 0 ... 1: //LIGHTS DOWN //--------------------------------------------------------------
             current_effect_func = effect_lights_down;
             PSC = 21972;
             multiplier = 0.1;
-            ownTempo=0;
+
             break;
-        case 3 ... 4: //STATIC COLOUR
+        case 2 ... 3: //STATIC COLOUR
 			current_effect_func = effect_static;
         	PSC = 21972;
             multiplier = 0.1;
-            ownTempo=0;
             break;
         case 13 ... 14: //STATIC TWO COLOUR - (CAN USE 0 colour!)
 			current_effect_func = effect_static_two_colour;
         	PSC = 21972;
             multiplier = 0.1;
-            ownTempo=0;
-            switch (effect2)
-            {
-                case 0 ... 24:    modifier = 2;   break;
-                case 25 ... 49:   modifier = 4;   break;
-                case 50 ... 74:   modifier = 6;   break;
-                case 75 ... 99:   modifier = 8;   break;
-                case 100 ... 124: modifier = 12;  break;
-                case 125 ... 149: modifier = 16;  break;
-                case 150 ... 174: modifier = 18;  break;
-                case 175 ... 199: modifier = 24;  break;
-                case 200 ... 224: modifier = 36;  break;
-                case 225 ... 255: modifier = 72;  break;
-            }
             break;
         case 15 ... 16: //STATIC TWO COLOUR w BRIGHTNESS
 			//ToDo: maximal brightness should be related to brightness set by DMX channel!
 			current_effect_func = effect_static_two_colour_brightness;
         	PSC = 21972;
             multiplier = 0.1;
-            ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 24:    modifier = 2;   break;
-				case 25 ... 49:   modifier = 4;   break;
-				case 50 ... 74:   modifier = 6;   break;
-				case 75 ... 99:   modifier = 8;   break;
-				case 100 ... 124: modifier = 12;  break;
-				case 125 ... 149: modifier = 16;  break;
-				case 150 ... 174: modifier = 18;  break;
-				case 175 ... 199: modifier = 24;  break;
-				case 200 ... 224: modifier = 36;  break;
-				case 225 ... 255: modifier = 72;  break;
-            }
             break;
         case 17 ... 18: //STATIC TWO COLOUR GRADIENT
 			current_effect_func = effect_static_two_colour_gradient;
         	PSC = 21972;
             multiplier = 0.1;
-            ownTempo=0;
-            switch (effect2)
-            {
-                case 0 ... 24:    modifier = 4;   break;
-                case 25 ... 49:   modifier = 8;   break;
-                case 50 ... 74:   modifier = 10;   break;
-                case 75 ... 99:   modifier = 20;   break;
-                case 100 ... 124: modifier = 40;  break;
-                case 125 ... 149: modifier = 60;  break;
-                case 150 ... 174: modifier = 80;  break;
-                case 175 ... 199: modifier = 100;  break;
-                case 200 ... 224: modifier = 120;  break;
-                case 225 ... 255: modifier = 140;  break;
-            }
             break;
          case 19 ... 20: //STATIC TWO COLOUR GRADIENT REVERSED
 			current_effect_func = effect_static_two_colour_gradient_2;
@@ -2350,7 +2300,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 			current_effect_func = effect_moving_gradient;
             colourChanged=1;
             modifier=1;
-            ownTempo=0;
             switch (effect2)
             {
 				case 0 ... 18:    multiplier = 0.25;  PSC=8789;  break;
@@ -2369,11 +2318,10 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 235 ... 255: current_effect_func =effect_moving_gradient_faster; modifier=16; multiplier = 32;    PSC=68;     break;
             }
             break;
-         case 37 ... 38: //MOVING GRADIENT; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
+         case 37 ... 38: //MOVING GRADIENT REVERSE; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
 			current_effect_func = effect_moving_gradient_reverse;
             colourChanged=1;
             modifier=1;
-            ownTempo=0;
             switch (effect2)
             {
 				case 0 ... 18:    multiplier = 0.25;  PSC=8789;  break;
@@ -2396,7 +2344,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 			current_effect_func = effect_glitchy_gradient;
 			colourChanged=1;
 			modifier=1;
-			ownTempo=0;
             switch (effect2)
             {
 				case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
@@ -2414,7 +2361,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 			current_effect_func = effect_moving_line;
             colourChanged=1;
             modifier=1;
-            ownTempo=0;
             switch (effect2)
             {
             	case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
@@ -2428,11 +2374,10 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             	case 225 ... 255: multiplier = 64;    PSC=34;    break;
             }
             break;
-         case 27 ... 28: //MOVING GLITCHY GRADIENT
+         case 27 ... 28: //MOVING GLITCHY
 			current_effect_func = effect_glitchy;
             colourChanged=1;
             modifier=1;
-            ownTempo=0;
             switch (effect2)
             {
             	case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
@@ -2449,7 +2394,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
          case 29 ... 30: //MOVING DOTS
      		current_effect_func = effect_moving_dots;
          	colourChanged=1;
-         	ownTempo=0;
             switch (effect2)
             {
 				case 0 ... 13:    multiplier = 8;   PSC=274;   modifier=3;   break;
@@ -2486,10 +2430,9 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
          	PSC=50;
          	ownTempo=1;
          	break;
-         case 35 ... 36: //JUMPING OWN
+         case 35 ... 36: //FALLING DROP
      		current_effect_func = effect_falling_drop;
          	modifier=1;
-         	ownTempo=0;
          	colourChanged=1;
          	switch (effect2)
             {
@@ -2504,7 +2447,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
         case 5 ... 6: //STROBE
 			current_effect_func = effect_strobe;
         	modifier=1;
-        	ownTempo=0;
             switch (effect2)
             {
 				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
@@ -2610,7 +2552,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
 
             }
-            break; */ //------------------------------------------------------------------------------------------------
+            break;  //------------------------------------------------------------------------------------------------
          case 57 ... 58: //SECTORS BACK AND FORTH
        		current_effect_func = effect_sectors_backAndForth;
          	modifier=1;
@@ -2643,7 +2585,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 
             }
             break;
-          case 45 ... 46: //SECTORS RANDOM
+          case 45 ... 46: //SECTORS FADEIN
          		current_effect_func = effect_sectors_fadein;
            	modifier=1;
            	ownTempo=0;
@@ -2675,7 +2617,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 
             }
             break;
-          case 49 ... 50:
+          case 49 ... 50: //MIDDLE
        		current_effect_func = effect_middle;
          	modifier=16;
          	ownTempo=0;
@@ -2686,7 +2628,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
             }
             break;
-          case 53 ... 54:
+          case 53 ... 54: //MIDDLE BACK AND FORTH
        		current_effect_func = effect_middle_bounce1;
          	modifier=16;
          	ownTempo=0;
@@ -2713,7 +2655,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
             }
             break;*/
-         case 55 ... 56:
+         case 55 ... 56: //SLIDE FROM BOTTOM
        		current_effect_func = effect_slide_bottom_keepLowest;
          	ownTempo=0;
             switch (effect2)
@@ -3042,6 +2984,12 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
        		current_effect_func = effect_tubes; //can use blank second colour!
          	ownTempo=0;
 			multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+
+          case 89 ... 90: //ToDo: add trueZero? probably not...
+       		current_effect_func = effect_tubes_true_pingpong; //can use blank second colour!
+         	ownTempo=0;
+			multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+
 
           case 51 ... 52: //STATIC RADOM
                 current_effect_func = effect_random_static;
