@@ -64,6 +64,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 static volatile uint32_t step=0;
 static volatile uint8_t nextStepFlag = 1;
+static uint8_t dmxRX[514];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,6 +105,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
         rxDoneFlag=true; //ToDo: přidat čtecí
 	}
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
+{
+	//memcpy(dmxPrevPacket, dmxPacket, DMXPACKET_SIZE);
+	//memcpy(&dmxPacket[0], &dmxRX[1], DMXPACKET_SIZE);
+
+    HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513); //DMXPACKET_SIZE
+    //dmxPacket[3]=255;
+    //HAL_Delay(5000);
 }
 /* USER CODE END 0 */
 
@@ -165,7 +176,10 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
-  effects_set_effect(38,0);
+  effects_set_effect(69,150);
+
+  //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
+  //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
   //ARGB_Clear();
   //ARGB_FillRGB(255, 255, 0);
   //ARGB_Show();
@@ -211,11 +225,34 @@ int main(void)
 	*/
 	  //ToDo: check gamma
 	 //static ColourName_t currentColour = PRIMARY_BLUE;
-	 if(nextStepFlag==1)
+	 //HAL_UART_Receive(&huart1, testPacket, 4, 100);
+	 //HAL_Delay(0);
+	 /*if(dmxRX[5]==0) ------------------------- VLASTNÍ BARVY!
+	 {
+		 ARGB_Clear();
+		 ARGB_SetBrightness(255);
+
+		 ARGB_FillRGB(dmxRX[1], dmxRX[2], dmxRX[3]);
+		 ARGB_FillWhite(dmxRX[4]);
+		 ARGB_Show();
+	 }
+	 else
+	 {
+		 ARGB_SetBrightness(255);
+		 ARGB_FillRGB(
+		 		colourTable[dmxRX[5]].r,
+		 		colourTable[dmxRX[5]].g,
+		 		colourTable[dmxRX[5]].b);
+		 	ARGB_FillWhite(colourTable[dmxRX[5]].w);
+		 	ARGB_Show();
+	 }
+	 HAL_Delay(500);*/
+
+	 if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
 	  {
 		  effects_next_step();
 		  nextStepFlag=0;
-	  }
+	  } //--------------------------------- ODKOMENTOVAT!!!
 
     /* USER CODE END WHILE */
 
@@ -439,7 +476,7 @@ static void MX_USART1_UART_Init(void)
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 250000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.StopBits = UART_STOPBITS_2;
   huart1.Init.Parity = UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
