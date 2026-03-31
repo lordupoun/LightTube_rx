@@ -84,7 +84,7 @@ static void MX_ADC1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static bool rxDoneFlag=false;
+static volatile bool rxDoneFlag=false;
 static uint8_t rx[PLD_SIZE];
 static uint8_t dataPacket[1][6];
 
@@ -102,10 +102,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	//EXTI for RF module (SI4432)
 	//if (GPIO_Pin == GPIO_PIN_11)
 	//{
-    	uint8_t b; //jen pro reset 0x03 registru
-    	SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
-    	SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
-
         rxDoneFlag=true; //ToDo: přidat čtecí
 	//}
 }
@@ -162,14 +158,18 @@ int main(void)
   HAL_Delay(500);
   //---SI4432---
   SI44_Init(&hspi2, GPIOB, GPIO_PIN_12);
-  HAL_Delay(5000); //ToDo: zkratit
+  //Delay used to be here
   SI44_PresetConfig();
+  HAL_Delay(5000); //ToDo: zkratit
   SI44_SetAGCMode(0b00100000); //6th bit - sgin
+  HAL_Delay(10);
   SI44_SetInterrupts1(0b00000010); //1st bit = CRC error
+  HAL_Delay(10);
   SI44_SetInterrupts2(0b00000000);
+  HAL_Delay(10);
   SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
   HAL_Delay(500);
-  SI44_SetRXon();
+
 
   //---ARGB effects---
   effects_init(&htim2); //before timer?
@@ -196,6 +196,21 @@ int main(void)
   //ARGB_Clear();
   //ARGB_FillRGB(255, 255, 0);
   //ARGB_Show();
+
+  //SetRXon should be placed as close as possible to the main loop,
+  //if not, FIFO buffer can overflow, which resets ipkvalid IRQ to logical 1.
+  //That would be caused by Si4432 already running in the background and receiving packets, while program for example waiting in HAL_Delay.
+  //(If FIFO overflows, the entire packet cannot be saved into FIFO -> invalid paket received.)
+  //That makes the program stuck with no option to start receiving again.
+  //ToDo: Fix this
+  //BEWARE - after resetting or quick ON/OFF switching FIFO/receiving seems to stay active -> FIFO will be kept full
+  uint8_t b; //jen pro reset 0x03 registru
+  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
+  SI44_Read(0x03, &b, 1);
+  rxDoneFlag = 0; //EXTREMELY IMPORTANT! Fake IRQ signal probably caused by Si4432 booting up!
+  __HAL_GPIO_EXTI_CLEAR_IT(SPI2_IRQ_Pin);
+  SI44_ClearRXFIFO();
+  SI44_SetRXon();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -207,8 +222,11 @@ int main(void)
 	  ARGB_Show();
 	  HAL_Delay(1000);*/
 	  //Recieving only applies when data changes - included in transmitter code
-	  if(rxDoneFlag==1)
+	  if(rxDoneFlag==1 || HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin) == GPIO_PIN_RESET)
 	  {
+		  rxDoneFlag=0;
+
+
 
 		  SI44_ReadPacket(testPacket);
 		  //ARGB_SetBrightness(255);
@@ -218,14 +236,12 @@ int main(void)
 		  //ARGB_Show();
 
 		  char uartBuf[50];  // dostatečně velký buffer
-		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
+		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
 		  HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 
-
-
-		  rxDoneFlag=0;
-
-		  //HAL_Delay(10);
+		  uint8_t b; //jen pro reset 0x03 registru
+		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
+		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 	  }
 	  //char uartBuf[50];  // dostatečně velký buffer
 	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
@@ -590,26 +606,16 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_RED_Pin|LED_GREEN_Pin|LED_Pin|SPI2_ShutDN_Pin
+                          |SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_RED_Pin|LED_GREEN_Pin|SPI2_ShutDN_Pin|SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : LED_Pin */
-  GPIO_InitStruct.Pin = LED_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin SPI2_ShutDN_Pin SPI2_GPIO_NSS_Pin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin|SPI2_ShutDN_Pin|SPI2_GPIO_NSS_Pin;
+  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin LED_Pin SPI2_ShutDN_Pin */
+  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin|LED_Pin|SPI2_ShutDN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -618,8 +624,15 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : SPI2_IRQ_Pin */
   GPIO_InitStruct.Pin = SPI2_IRQ_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SPI2_IRQ_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SPI2_GPIO_NSS_Pin */
+  GPIO_InitStruct.Pin = SPI2_GPIO_NSS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  HAL_GPIO_Init(SPI2_GPIO_NSS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DIP1_Pin DIP2_Pin DIP3_Pin */
   GPIO_InitStruct.Pin = DIP1_Pin|DIP2_Pin|DIP3_Pin;
@@ -657,6 +670,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
   }
   /* USER CODE END Error_Handler_Debug */
 }
