@@ -53,6 +53,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
@@ -64,17 +66,18 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 static volatile uint32_t step=0;
 static volatile uint8_t nextStepFlag = 1;
-static uint8_t dmxRX[514];
+//static uint8_t dmxRX[514];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_SPI2_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -97,17 +100,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	//EXTI for RF module (SI4432)
-	if (GPIO_Pin == GPIO_PIN_11)
-	{
+	//if (GPIO_Pin == GPIO_PIN_11)
+	//{
     	uint8_t b; //jen pro reset 0x03 registru
     	SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
     	SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 
         rxDoneFlag=true; //ToDo: přidat čtecí
-	}
+	//}
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
+/*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
 	//memcpy(dmxPrevPacket, dmxPacket, DMXPACKET_SIZE);
 	//memcpy(&dmxPacket[0], &dmxRX[1], DMXPACKET_SIZE);
@@ -115,7 +118,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
     HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513); //DMXPACKET_SIZE
     //dmxPacket[3]=255;
     //HAL_Delay(5000);
-}
+}*/
 /* USER CODE END 0 */
 
 /**
@@ -148,22 +151,24 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART1_UART_Init();
   MX_TIM1_Init();
-  MX_TIM2_Init();
   MX_SPI2_Init();
+  MX_TIM2_Init();
+  MX_USART1_UART_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
-
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_Delay(500);
   //---SI4432---
   SI44_Init(&hspi2, GPIOB, GPIO_PIN_12);
-  //HAL_Delay(5000); //ToDo: zkratit
+  HAL_Delay(5000); //ToDo: zkratit
   SI44_PresetConfig();
   SI44_SetAGCMode(0b00100000); //6th bit - sgin
   SI44_SetInterrupts1(0b00000010); //1st bit = CRC error
   SI44_SetInterrupts2(0b00000000);
   SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
-  //HAL_Delay(500);
+  HAL_Delay(500);
   SI44_SetRXon();
 
   //---ARGB effects---
@@ -173,10 +178,18 @@ int main(void)
   //ARGB_Clear();
   //ARGB_Show();
 
-  HAL_TIM_Base_Start_IT(&htim2);
+  //HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
-  effects_set_effect(87,57);
+  testPacket[0]=255;
+  testPacket[1]=0;
+  testPacket[2]=0;
+  testPacket[3]=0;
+  testPacket[4]=0;
+  testPacket[5]=0;
+  testPacket[6]=0;
+
+  //effects_set_effect(87,57);
 
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
@@ -194,18 +207,18 @@ int main(void)
 	  ARGB_Show();
 	  HAL_Delay(1000);*/
 	  //Recieving only applies when data changes - included in transmitter code
-	  /*if(rxDoneFlag==1)
+	  if(rxDoneFlag==1)
 	  {
 
 		  SI44_ReadPacket(testPacket);
 		  //ARGB_SetBrightness(255);
 		  //ARGB_Clear();
 		  //ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
-		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
-		  ARGB_Show();
+		  //ARGB_FillRGB(testPacket[1], testPacket[2], testPacket[3]);
+		  //ARGB_Show();
 
 		  char uartBuf[50];  // dostatečně velký buffer
-		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[0], testPacket[1], testPacket[2]);
+		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
 		  HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 
 
@@ -213,7 +226,10 @@ int main(void)
 		  rxDoneFlag=0;
 
 		  //HAL_Delay(10);
-	  }*/
+	  }
+	  //char uartBuf[50];  // dostatečně velký buffer
+	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
+	  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 	  /*ARGB_SetBrightness(255);
 	  ARGB_FillRGB(255, 0, 0);
 	  ARGB_Show();
@@ -248,11 +264,11 @@ int main(void)
 	 }
 	 HAL_Delay(500);*/
 
-	 if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
+	 /*if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
 	  {
 		  effects_next_step();
 		  nextStepFlag=0;
-	  } //--------------------------------- ODKOMENTOVAT!!!
+	  } //--------------------------------- ODKOMENTOVAT!!!*/
 
     /* USER CODE END WHILE */
 
@@ -269,6 +285,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -298,6 +315,59 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -434,7 +504,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 6399;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 359;
+  htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -522,21 +592,28 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SPI2_GPIO_NSS_GPIO_Port, SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_RED_Pin|LED_GREEN_Pin|SPI2_ShutDN_Pin|SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PC13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin SPI2_ShutDN_Pin SPI2_GPIO_NSS_Pin */
+  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin|SPI2_ShutDN_Pin|SPI2_GPIO_NSS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SPI2_IRQ_Pin */
   GPIO_InitStruct.Pin = SPI2_IRQ_Pin;
@@ -544,12 +621,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SPI2_IRQ_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : SPI2_GPIO_NSS_Pin */
-  GPIO_InitStruct.Pin = SPI2_GPIO_NSS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : DIP1_Pin DIP2_Pin DIP3_Pin */
+  GPIO_InitStruct.Pin = DIP1_Pin|DIP2_Pin|DIP3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(SPI2_GPIO_NSS_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DIP4_Pin */
+  GPIO_InitStruct.Pin = DIP4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DIP4_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);

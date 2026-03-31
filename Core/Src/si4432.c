@@ -130,9 +130,11 @@ void SI44_ClearRXFIFO(void)
 void SI44_ReadPacket(uint8_t * buf)
 {
 	uint8_t length=0;
+	if(length!=0) //UNCOMMENT!
+	{
 	SI44_Read(SI44_RECEIVED_PACKET_LENGTH, &length, 1); //ToDo: Pokud length neni vetsi jak 64
 	SI44_Read(SI44_REG_FIFO_ACCESS, buf, length);
-
+	}
 	SI44_ClearRXFIFO();
 
 	SI44_SetRXon(); //ToDo: const static?
