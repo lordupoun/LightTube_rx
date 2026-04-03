@@ -540,6 +540,7 @@ static void effect_switch_colours(void)
     }
 }
 
+//ToDo:opravit a udělat matematicky dobře
 static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES JASU BY MEL RESPEKTOVAT LOGARITMICKOU KRIVKU VNIMANI
 {
 	static float brightness=0;
@@ -547,6 +548,7 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
 	if(step>modifier-1)
 	{
         step=0;
+        brightness=0;
 	}
     if(step<modifier/2-1)
     {
@@ -556,6 +558,8 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
     {
         brightness-=brightnessStep;
     }
+    if(brightness > 255.0f) brightness = 255.0f;
+    if(brightness < 0.0f) brightness = 0.0f;
     ARGB_FillRGB((colourTable[primaryColour].r*(uint8_t)brightness)/255, (colourTable[primaryColour].g*(uint8_t)brightness)/255, (colourTable[primaryColour].b*(uint8_t)brightness)/255);
     ARGB_FillWhite((colourTable[primaryColour].w*(uint8_t)brightness)/255);
     ARGB_Show();

@@ -189,6 +189,7 @@ int main(void)
   testPacket[5]=0;
   testPacket[6]=0;
 
+  effects_set_effect(82,22); //neošetřenej stav bez efektu?
   //effects_set_effect(87,57);
 
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
@@ -217,9 +218,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  //ARGB_FillRGB(255, 255, 0);
+	  //ARGB_Show();
 	  /*ARGB_Clear();
-	  ARGB_FillRGB(255, 255, 0);
-	  ARGB_Show();
+
 	  HAL_Delay(1000);*/
 	  //Recieving only applies when data changes - included in transmitter code
 	  if(rxDoneFlag==1 || HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin) == GPIO_PIN_RESET)
@@ -231,9 +233,10 @@ int main(void)
 		  SI44_ReadPacket(testPacket);
 		  //ARGB_SetBrightness(255);
 		  //ARGB_Clear();
-		  //ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
+		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
 		  //ARGB_FillRGB(testPacket[1], testPacket[2], testPacket[3]);
-		  //ARGB_Show();
+		  ARGB_Show();
+		  //effects_set_effect(testPacket[1],testPacket[2]);
 
 		  char uartBuf[50];  // dostatečně velký buffer
 		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
@@ -280,11 +283,11 @@ int main(void)
 	 }
 	 HAL_Delay(500);*/
 
-	 /*if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
+	 if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
 	  {
 		  effects_next_step();
 		  nextStepFlag=0;
-	  } //--------------------------------- ODKOMENTOVAT!!!*/
+	  } //--------------------------------- ODKOMENTOVAT!!!
 
     /* USER CODE END WHILE */
 

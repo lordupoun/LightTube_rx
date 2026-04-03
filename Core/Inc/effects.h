@@ -19,7 +19,7 @@
 
 void effects_init(TIM_HandleTypeDef *htim);
 void effects_set_bpm(uint16_t new_bpm);
-void effects_set_eff(uint16_t effect, ColourName_t currentColour,uint16_t bpm);
-void effects_step_iterate();
+void effects_set_effect(uint8_t effect1, uint8_t effect2);
+void effects_next_step();
 
 #endif /* INC_EFFECTS_H_ */
