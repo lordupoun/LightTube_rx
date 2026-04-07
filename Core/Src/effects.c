@@ -19,8 +19,10 @@
 
 static TIM_HandleTypeDef *htimLocal;
 static uint16_t bpm = 164;
-static ColourName_t primaryColour = 233; //20
-static ColourName_t secondaryColour = 102; //102
+static uint8_t primaryColourNumber;
+static uint8_t secondaryColourNumber;
+static ColourRGB_t primaryColour = {255, 0, 0, 0}; //20
+static ColourRGB_t secondaryColour = {0, 255, 0, 0}; //102
 static uint32_t step = 0;
 //static uint8_t is_new_effect = 0;
 //static uint8_t brightness=255;
@@ -29,6 +31,7 @@ static uint32_t step = 0;
 static uint16_t PSC; 		 //defines the tempo accuraccy (ARR is automatically computed from given PSC and multiplier)
 static float multiplier = 1; //defines the speed of an animation
 static uint16_t modifier = 1; //defines the variation of an animation
+static uint8_t brightness = 255; //defines the speed of an animation
 
 static uint8_t colourChanged = 0; //for effects that has to recalculate the influence of colour change (gradients, etc.)
 static uint8_t ownTempo=0;  	  //for effects that use fixed individual refresh rate
@@ -57,10 +60,10 @@ static void effect_lights_down(void)
 static void effect_static(void)
 {
 	ARGB_FillRGB(
-		colourTable[primaryColour].r,
-		colourTable[primaryColour].g,
-		colourTable[primaryColour].b);
-	ARGB_FillWhite(colourTable[primaryColour].w);
+		primaryColour.r,
+		primaryColour.g,
+		primaryColour.b);
+	ARGB_FillWhite(primaryColour.w);
 	ARGB_Show();
 }
 
@@ -73,16 +76,16 @@ static void effect_static_two_colour(void)
 		{
 			for(uint8_t b=0; b<modifier; b++)
 			{
-				ARGB_SetRGB(a*modifier+b, colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(a*modifier+b, colourTable[secondaryColour].w);
+				ARGB_SetRGB(a*modifier+b, primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(a*modifier+b, secondaryColour.w);
 			}
 		}
 		else
 		{
 			for(uint8_t b=0; b<modifier; b++)
 			{
-				ARGB_SetRGB(a*modifier+b, colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-				ARGB_SetWhite(a*modifier+b, colourTable[secondaryColour].w);
+				ARGB_SetRGB(a*modifier+b, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+				ARGB_SetWhite(a*modifier+b, secondaryColour.w);
 			}
 		}
 	}
@@ -101,8 +104,8 @@ static void effect_static_two_colour_brightness(void)
 			for(uint8_t b=0; b<modifier; b++)
 			{
 				ARGB_SetBrightness(brightnessStep*b);
-				ARGB_SetRGB(a*modifier+b, colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(a*modifier+b, colourTable[secondaryColour].w);
+				ARGB_SetRGB(a*modifier+b, primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(a*modifier+b, secondaryColour.w);
 			}
 		}
 		else
@@ -110,8 +113,8 @@ static void effect_static_two_colour_brightness(void)
 			for(uint8_t b=0; b<modifier; b++)
 			{
 				ARGB_SetBrightness(brightnessStep*(modifier-1-b));
-				ARGB_SetRGB(a*modifier+b, colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-				ARGB_SetWhite(a*modifier+b, colourTable[secondaryColour].w);
+				ARGB_SetRGB(a*modifier+b, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+				ARGB_SetWhite(a*modifier+b, secondaryColour.w);
 			}
 		}
 	}
@@ -124,30 +127,30 @@ static void effect_static_two_colour_gradient(void) //ToDo: Colour change needs 
 	uint8_t colourMaxStep=LEDCOUNT-modifier;
 	//if(colourChanged==1)
 	//{
-	colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-	colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-	colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-	colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+	colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+	colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+	colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+	colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 
 	for(uint16_t i=0; i<modifier/2; i++)
 	{
-		ARGB_SetRGB(i, colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i, colourTable[primaryColour].w);
+		ARGB_SetRGB(i, primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i, primaryColour.w);
 	}
 	for(uint16_t i=LEDCOUNT-(modifier/2); i<LEDCOUNT; i++)
 	{
-		ARGB_SetRGB(i, colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-		ARGB_SetWhite(i, colourTable[secondaryColour].w);
+		ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+		ARGB_SetWhite(i, secondaryColour.w);
 	}
 	for(uint16_t i=0; i<=LEDCOUNT-multiplier; i++)
 	{
 		uint8_t ledNum=i+(modifier/2-1);
 		ARGB_SetRGB(ledNum,
-					round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-					round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-					round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+					round(primaryColour.r+colourChangeVector[0]*(float)i),
+					round(primaryColour.g+colourChangeVector[1]*(float)i),
+					round(primaryColour.b+colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-					round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+					round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	//}
 	ARGB_Show();
@@ -158,28 +161,28 @@ static void effect_static_two_colour_gradient_2(void)
 {
 	float colourChangeVector[4];
 	uint8_t colourMaxStep=LEDCOUNT/2;
-	colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-	colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-	colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-	colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+	colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+	colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+	colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+	colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
 		ARGB_SetRGB(i,
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(i,
-						round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+						round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
 		ARGB_SetRGB(colourMaxStep+i,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(colourMaxStep+i,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -196,10 +199,10 @@ static void effect_moving_gradient(void) //ToDo: add safetyLines, add if step>14
     }
 	if(colourChanged==1) //prevents dividing with each cycle -> less HW intensive; re-calculates colour vector only when DMX colour changes
 	{
-		colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-		colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-		colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+		colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+		colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+		colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 		colourChanged=0;
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
@@ -211,11 +214,11 @@ static void effect_moving_gradient(void) //ToDo: add safetyLines, add if step>14
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum, //firstStep=0 - sets half of the strip to it's gradient colour; then moves effect one LED up
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 	    ARGB_SetWhite(ledNum,
-	    				round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+	    				round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
@@ -225,11 +228,11 @@ static void effect_moving_gradient(void) //ToDo: add safetyLines, add if step>14
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -246,10 +249,10 @@ static void effect_moving_gradient_reverse(void) //ToDo: MERGE with effect_movin
     }
 	if(colourChanged==1) //prevents dividing with each cycle -> less HW intensive; re-calculates colour vector only when DMX colour changes
 	{
-		colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-		colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-		colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+		colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+		colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+		colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 		colourChanged=0;
 	}
 	uint16_t reverseStep = LEDCOUNT - step;
@@ -266,11 +269,11 @@ static void effect_moving_gradient_reverse(void) //ToDo: MERGE with effect_movin
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum, //firstStep=0 - sets half of the strip to it's gradient colour; then moves effect one LED up
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 	    ARGB_SetWhite(ledNum,
-	    				round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+	    				round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
@@ -280,11 +283,11 @@ static void effect_moving_gradient_reverse(void) //ToDo: MERGE with effect_movin
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -298,10 +301,10 @@ static void effect_moving_gradient_reverse_faster(void) //ToDo: MERGE with effec
 	localStep = LEDCOUNT - localStep; //reverse
 	if(colourChanged==1) //prevents dividing with each cycle -> less HW intensive; re-calculates colour vector only when DMX colour changes
 	{
-		colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-		colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-		colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+		colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+		colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+		colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 		colourChanged=0;
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
@@ -312,11 +315,11 @@ static void effect_moving_gradient_reverse_faster(void) //ToDo: MERGE with effec
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum, //firstStep=0 - sets half of the strip to it's gradient colour; then moves effect one LED up
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 	    ARGB_SetWhite(ledNum,
-	    				round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+	    				round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
@@ -326,11 +329,11 @@ static void effect_moving_gradient_reverse_faster(void) //ToDo: MERGE with effec
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -344,10 +347,10 @@ static void effect_moving_gradient_faster(void) //ToDo: Maybe merge into effect_
 	uint16_t localStep = (step * modifier)%LEDCOUNT; //modifies step -> making animation faster (must be modulo so it doesn't step out of strip - just get onto the other end)
 	if(colourChanged==1) //prevents dividing with each cycle -> less HW intensive; re-calculates colour vector only when DMX colour changes
 	{
-		colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-		colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-		colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+		colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+		colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+		colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 		colourChanged=0;
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
@@ -358,11 +361,11 @@ static void effect_moving_gradient_faster(void) //ToDo: Maybe merge into effect_
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum, //firstStep=0 - sets half of the strip to it's gradient colour; then moves effect one LED up
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 	    ARGB_SetWhite(ledNum,
-	    				round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+	    				round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
@@ -372,11 +375,11 @@ static void effect_moving_gradient_faster(void) //ToDo: Maybe merge into effect_
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -388,31 +391,31 @@ static void effect_glitchy_gradient(void) //safe thanks to ARGB library
 	uint16_t localStep = step%144;
 	if(colourChanged==1)
 	{
-		colourChangeVector[0]=((int16_t)colourTable[secondaryColour].r-(int16_t)colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		colourChangeVector[1]=((int16_t)colourTable[secondaryColour].g-(int16_t)colourTable[primaryColour].g)/(float)colourMaxStep;
-		colourChangeVector[2]=((int16_t)colourTable[secondaryColour].b-(int16_t)colourTable[primaryColour].b)/(float)colourMaxStep;
-		colourChangeVector[3]=((int16_t)colourTable[secondaryColour].w-(int16_t)colourTable[primaryColour].w)/(float)colourMaxStep;
+		colourChangeVector[0]=((int16_t)secondaryColour.r-(int16_t)primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		colourChangeVector[1]=((int16_t)secondaryColour.g-(int16_t)primaryColour.g)/(float)colourMaxStep;
+		colourChangeVector[2]=((int16_t)secondaryColour.b-(int16_t)primaryColour.b)/(float)colourMaxStep;
+		colourChangeVector[3]=((int16_t)secondaryColour.w-(int16_t)primaryColour.w)/(float)colourMaxStep;
 		colourChanged=0;
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
 		uint16_t ledNum = (i+localStep) % LEDCOUNT;
 		ARGB_SetRGB(ledNum,
-						round(colourTable[primaryColour].r+colourChangeVector[0]*(float)i),
-						round(colourTable[primaryColour].g+colourChangeVector[1]*(float)i),
-						round(colourTable[primaryColour].b+colourChangeVector[2]*(float)i));
+						round(primaryColour.r+colourChangeVector[0]*(float)i),
+						round(primaryColour.g+colourChangeVector[1]*(float)i),
+						round(primaryColour.b+colourChangeVector[2]*(float)i));
 	    ARGB_SetWhite(ledNum,
-	    				round(colourTable[primaryColour].w+colourChangeVector[3]*(float)i));
+	    				round(primaryColour.w+colourChangeVector[3]*(float)i));
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
 		uint16_t ledNum = (colourMaxStep+i-step) % LEDCOUNT;
 		ARGB_SetRGB(ledNum,
-						round(colourTable[secondaryColour].r-colourChangeVector[0]*(float)i),
-						round(colourTable[secondaryColour].g-colourChangeVector[1]*(float)i),
-						round(colourTable[secondaryColour].b-colourChangeVector[2]*(float)i));
+						round(secondaryColour.r-colourChangeVector[0]*(float)i),
+						round(secondaryColour.g-colourChangeVector[1]*(float)i),
+						round(secondaryColour.b-colourChangeVector[2]*(float)i));
 		ARGB_SetWhite(ledNum,
-						round(colourTable[secondaryColour].w-colourChangeVector[3]*(float)i));
+						round(secondaryColour.w-colourChangeVector[3]*(float)i));
 	}
     ARGB_Show();
 }
@@ -433,11 +436,11 @@ static void effect_moving_line(void) //made thx to a bug...  don't judge the cod
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						colourTable[primaryColour].r,
-						colourTable[primaryColour].g,
-						colourTable[primaryColour].b);
+						primaryColour.r,
+						primaryColour.g,
+						primaryColour.b);
 	    ARGB_SetWhite(ledNum,
-	    				colourTable[primaryColour].w);
+	    				primaryColour.w);
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
@@ -447,11 +450,11 @@ static void effect_moving_line(void) //made thx to a bug...  don't judge the cod
 			ledNum = ledNum - LEDCOUNT;
 		}
 		ARGB_SetRGB(ledNum,
-						colourTable[secondaryColour].r,
-						colourTable[secondaryColour].g,
-						colourTable[secondaryColour].b);
+						secondaryColour.r,
+						secondaryColour.g,
+						secondaryColour.b);
 		ARGB_SetWhite(ledNum,
-						colourTable[secondaryColour].w);
+						secondaryColour.w);
 	}
     ARGB_Show();
 }
@@ -465,31 +468,31 @@ static void effect_glitchy(void) //made thx to a bug... don't judge the code...
 	{
 		uint16_t ledNum = (i+localStep) % LEDCOUNT;
 		ARGB_SetRGB(ledNum,
-						colourTable[primaryColour].r,
-						colourTable[primaryColour].g,
-						colourTable[primaryColour].b);
+						primaryColour.r,
+						primaryColour.g,
+						primaryColour.b);
 	    ARGB_SetWhite(ledNum,
-	    				colourTable[primaryColour].w);
+	    				primaryColour.w);
 	}
 	for(uint16_t i=0; i<colourMaxStep; i++)
 	{
 		uint16_t ledNum = (colourMaxStep+i-step) % LEDCOUNT;
 		ARGB_SetRGB(ledNum,
-						colourTable[secondaryColour].r,
-						colourTable[secondaryColour].g,
-						colourTable[secondaryColour].b);
+						secondaryColour.r,
+						secondaryColour.g,
+						secondaryColour.b);
 		ARGB_SetWhite(ledNum,
-						colourTable[secondaryColour].w);
+						secondaryColour.w);
 	}
     ARGB_Show();
 }
 
 static void effect_strobe(void)
 {
-    if (step==1)
+    if (step==0)
     {
-        ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-        ARGB_FillWhite(colourTable[primaryColour].w);
+        ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+        ARGB_FillWhite(primaryColour.w);
         ARGB_Show();
     }
     else
@@ -505,15 +508,15 @@ static void effect_strobe_colours(void)
     switch(step)
     {
 		case 1:
-			ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_FillWhite(colourTable[primaryColour].w);
+			ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_FillWhite(primaryColour.w);
 			break;
 		case 2:
 			ARGB_Clear();
 			break;
 		case 3:
-			ARGB_FillRGB(colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_FillWhite(colourTable[secondaryColour].w);
+			ARGB_FillRGB(secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_FillWhite(secondaryColour.w);
 			break;
 		default:
 			ARGB_Clear();
@@ -527,14 +530,14 @@ static void effect_switch_colours(void)
 {
     if (step==1)
     {
-		ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_FillWhite(colourTable[primaryColour].w);
+		ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_FillWhite(primaryColour.w);
         ARGB_Show();
     }
     else
     {
-		ARGB_FillRGB(colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-		ARGB_FillWhite(colourTable[secondaryColour].w);
+		ARGB_FillRGB(secondaryColour.r, secondaryColour.g, secondaryColour.b);
+		ARGB_FillWhite(secondaryColour.w);
 		ARGB_Show();
         step = 0;
     }
@@ -560,8 +563,8 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
     }
     if(brightness > 255.0f) brightness = 255.0f;
     if(brightness < 0.0f) brightness = 0.0f;
-    ARGB_FillRGB((colourTable[primaryColour].r*(uint8_t)brightness)/255, (colourTable[primaryColour].g*(uint8_t)brightness)/255, (colourTable[primaryColour].b*(uint8_t)brightness)/255);
-    ARGB_FillWhite((colourTable[primaryColour].w*(uint8_t)brightness)/255);
+    ARGB_FillRGB((primaryColour.r*(uint8_t)brightness)/255, (primaryColour.g*(uint8_t)brightness)/255, (primaryColour.b*(uint8_t)brightness)/255);
+    ARGB_FillWhite((primaryColour.w*(uint8_t)brightness)/255);
     ARGB_Show();
 
 }
@@ -581,8 +584,8 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
     {
         brightness=brightness-8.22f;
     }
-    ARGB_FillRGB((colourTable[primaryColour].r*(uint8_t)brightness)/255, (colourTable[primaryColour].g*(uint8_t)brightness)/255, (colourTable[primaryColour].b*(uint8_t)brightness)/255);
-    ARGB_FillWhite((colourTable[primaryColour].w*(uint8_t)brightness)/255);
+    ARGB_FillRGB((primaryColour.r*(uint8_t)brightness)/255, (primaryColour.g*(uint8_t)brightness)/255, (primaryColour.b*(uint8_t)brightness)/255);
+    ARGB_FillWhite((primaryColour.w*(uint8_t)brightness)/255);
     ARGB_Show();
 
 }*/
@@ -622,14 +625,14 @@ static void effect_moving_dots(void) //AI GENEROVÁNO!
     if (num_dots > 10) num_dots = 10;
 
     // 1. Vyplnění podkladovou barvou
-    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    ARGB_FillWhite(colourTable[primaryColour].w);
+    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_FillWhite(primaryColour.w);
 
     // Výpočet celkového rozdílu barev pro lineární interpolaci gradientu (ocasů)
-    int16_t r_diff = (int16_t)colourTable[primaryColour].r - (int16_t)colourTable[secondaryColour].r;
-    int16_t g_diff = (int16_t)colourTable[primaryColour].g - (int16_t)colourTable[secondaryColour].g;
-    int16_t b_diff = (int16_t)colourTable[primaryColour].b - (int16_t)colourTable[secondaryColour].b;
-    int16_t w_diff = (int16_t)colourTable[primaryColour].w - (int16_t)colourTable[secondaryColour].w;
+    int16_t r_diff = (int16_t)primaryColour.r - (int16_t)secondaryColour.r;
+    int16_t g_diff = (int16_t)primaryColour.g - (int16_t)secondaryColour.g;
+    int16_t b_diff = (int16_t)primaryColour.b - (int16_t)secondaryColour.b;
+    int16_t w_diff = (int16_t)primaryColour.w - (int16_t)secondaryColour.w;
 
     // 2. Vykreslení teček
     for (uint8_t i = 0; i < num_dots; i++)
@@ -662,10 +665,10 @@ static void effect_moving_dots(void) //AI GENEROVÁNO!
             else if (draw_pos < 0) draw_pos += LEDCOUNT;
 
             // Výpočet barvy rychlou celočíselnou interpolací (0 = plná hlava, current_tail = plný podklad)
-            uint8_t r = colourTable[secondaryColour].r + (r_diff * j) / current_tail;
-            uint8_t g = colourTable[secondaryColour].g + (g_diff * j) / current_tail;
-            uint8_t b = colourTable[secondaryColour].b + (b_diff * j) / current_tail;
-            uint8_t w = colourTable[secondaryColour].w + (w_diff * j) / current_tail;
+            uint8_t r = secondaryColour.r + (r_diff * j) / current_tail;
+            uint8_t g = secondaryColour.g + (g_diff * j) / current_tail;
+            uint8_t b = secondaryColour.b + (b_diff * j) / current_tail;
+            uint8_t w = secondaryColour.w + (w_diff * j) / current_tail;
 
             ARGB_SetRGB((uint16_t)draw_pos, r, g, b);
             ARGB_SetWhite((uint16_t)draw_pos, w);
@@ -691,9 +694,9 @@ static void effect_jumping(void) //AI GENEROVÁNO!
 	y = 0.5f * H * (1.0f - cosf(phase));
 
 	ARGB_Clear();
-	ARGB_SetRGB((uint8_t) (y + 0.5f), colourTable[primaryColour].r,
-			colourTable[primaryColour].g, colourTable[primaryColour].b);
-	ARGB_SetWhite((uint8_t) (y + 0.5f), colourTable[primaryColour].w);
+	ARGB_SetRGB((uint8_t) (y + 0.5f), primaryColour.r,
+			primaryColour.g, primaryColour.b);
+	ARGB_SetWhite((uint8_t) (y + 0.5f), primaryColour.w);
 	ARGB_Show();
 }
 
@@ -717,9 +720,9 @@ static void effect_jumping_own(void)
 		vy *= -1.0f;
 	}
 	ARGB_Clear();
-	ARGB_SetRGB((uint8_t) (y + 0.5f), colourTable[primaryColour].r,
-			colourTable[primaryColour].g, colourTable[primaryColour].b); //rounds and casts to int
-	ARGB_SetWhite((uint8_t) (y + 0.5f), colourTable[primaryColour].w);
+	ARGB_SetRGB((uint8_t) (y + 0.5f), primaryColour.r,
+			primaryColour.g, primaryColour.b); //rounds and casts to int
+	ARGB_SetWhite((uint8_t) (y + 0.5f), primaryColour.w);
 	ARGB_Show();
 }
 
@@ -731,22 +734,22 @@ static void effect_falling_drop(void)
 	if(step>=LEDCOUNT)
 	{
 		step=0;
-		currentColourChanged[0]=colourTable[primaryColour].r;
-		currentColourChanged[1]=colourTable[primaryColour].g;
-		currentColourChanged[2]=colourTable[primaryColour].b;
-		currentColourChanged[3]=colourTable[primaryColour].w;
+		currentColourChanged[0]=primaryColour.r;
+		currentColourChanged[1]=primaryColour.g;
+		currentColourChanged[2]=primaryColour.b;
+		currentColourChanged[3]=primaryColour.w;
 	}
 	if(colourChanged==1)
 	{
-		 colourChangeVector[0]=(colourTable[secondaryColour].r-colourTable[primaryColour].r)/(float)colourMaxStep; //144-1 = max step count step count
-		 colourChangeVector[1]=(colourTable[secondaryColour].g-colourTable[primaryColour].g)/(float)colourMaxStep;
-		 colourChangeVector[2]=(colourTable[secondaryColour].b-colourTable[primaryColour].b)/(float)colourMaxStep;
-		 colourChangeVector[3]=(colourTable[secondaryColour].w-colourTable[primaryColour].w)/(float)colourMaxStep;
+		 colourChangeVector[0]=(secondaryColour.r-primaryColour.r)/(float)colourMaxStep; //144-1 = max step count step count
+		 colourChangeVector[1]=(secondaryColour.g-primaryColour.g)/(float)colourMaxStep;
+		 colourChangeVector[2]=(secondaryColour.b-primaryColour.b)/(float)colourMaxStep;
+		 colourChangeVector[3]=(secondaryColour.w-primaryColour.w)/(float)colourMaxStep;
 
-		 currentColourChanged[0]=colourTable[primaryColour].r; //A: faster to compute
-		 currentColourChanged[1]=colourTable[primaryColour].g;
-		 currentColourChanged[2]=colourTable[primaryColour].b;
-		 currentColourChanged[3]=colourTable[primaryColour].w;
+		 currentColourChanged[0]=primaryColour.r; //A: faster to compute
+		 currentColourChanged[1]=primaryColour.g;
+		 currentColourChanged[2]=primaryColour.b;
+		 currentColourChanged[3]=primaryColour.w;
 
 		 colourChanged=0;
 	}
@@ -777,16 +780,16 @@ static void effect_odd_even(void)
 	{
         for(uint16_t i=0; i<LEDCOUNT; i+=2)
         {
-        	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-        	ARGB_SetWhite(i,colourTable[primaryColour].w);
+        	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+        	ARGB_SetWhite(i,primaryColour.w);
         }
 	}
 	else
 	{
         for(uint16_t i=1; i<LEDCOUNT; i+=2)
         {
-        	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-        	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+        	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+        	ARGB_SetWhite(i,secondaryColour.w);
         }
 	}
     ARGB_Show();
@@ -801,64 +804,64 @@ static void effect_sectors_fadein(void)//ToDo: optimize!
 		case 0:
 			for(uint16_t i=0; i<18; i++)
 			{
-				ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(i,colourTable[primaryColour].w);
+				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(i,primaryColour.w);
 				ARGB_Show();
 			}
 			break;
 		case 1:
 			for(uint16_t i=126; i<144; i++)
 			{
-				ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(i,colourTable[primaryColour].w);
+				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(i,primaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 2:
 			for(uint16_t i=18; i<36; i++)
 			{
-	    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    		ARGB_SetWhite(i,secondaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 3:
 			for(uint16_t i=108; i<126; i++)
 			{
-	    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    		ARGB_SetWhite(i,secondaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 4:
 			for(uint16_t i=36; i<54; i++)
 			{
-				ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(i,colourTable[primaryColour].w);
+				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(i,primaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 5:
 			for(uint16_t i=90; i<108; i++)
 			{
-				ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-				ARGB_SetWhite(i,colourTable[primaryColour].w);
+				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+				ARGB_SetWhite(i,primaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 6:
 			for(uint16_t i=54; i<72; i++)
 			{
-	    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    		ARGB_SetWhite(i,secondaryColour.w);
 				ARGB_Show();
 			}
 		break;
 		case 7:
 			for(uint16_t i=72; i<90; i++)
 			{
-	    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    		ARGB_SetWhite(i,secondaryColour.w);
 				ARGB_Show();
 				//ARGB_Clear();
 			}
@@ -879,57 +882,57 @@ static void effect_sectors_blinking(void)
 	case 3:
     	for(uint16_t i=0; i<18; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
         break;
 	case 0:
     	for(uint16_t i=126; i<144; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 1:
     	for(uint16_t i=18; i<36; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 7:
     	for(uint16_t i=108; i<126; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 5:
     	for(uint16_t i=36; i<54; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 2:
     	for(uint16_t i=90; i<108; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 6:
     	for(uint16_t i=54; i<72; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 4:
     	for(uint16_t i=72; i<90; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 8 ... 14:
@@ -953,57 +956,57 @@ static void effect_sectors(void)
 	case 0:
     	for(uint16_t i=0; i<18; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
         break;
 	case 1:
     	for(uint16_t i=126; i<144; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 2:
     	for(uint16_t i=18; i<36; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 3:
     	for(uint16_t i=108; i<126; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 4:
     	for(uint16_t i=36; i<54; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 5:
     	for(uint16_t i=90; i<108; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 6:
     	for(uint16_t i=54; i<72; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 7:
     	for(uint16_t i=72; i<90; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	}
@@ -1022,49 +1025,49 @@ static void effect_sectors_together(void)
 	case 0:
     	for(uint16_t i=0; i<18; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     	for(uint16_t i=126; i<144; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
         break;
 	case 1:
     	for(uint16_t i=18; i<36; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     	for(uint16_t i=108; i<126; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 2:
     	for(uint16_t i=36; i<54; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     	for(uint16_t i=90; i<108; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 3:
     	for(uint16_t i=54; i<72; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     	for(uint16_t i=72; i<90; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	}
@@ -1084,57 +1087,57 @@ static void effect_sectors_backAndForth(void)
 	case 3:
     	for(uint16_t i=0; i<18; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
         break;
 	case 0:
     	for(uint16_t i=126; i<144; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 1:
     	for(uint16_t i=18; i<36; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 7:
     	for(uint16_t i=108; i<126; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 5:
     	for(uint16_t i=36; i<54; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 2:
     	for(uint16_t i=90; i<108; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 6:
     	for(uint16_t i=54; i<72; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 4:
     	for(uint16_t i=72; i<90; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 9:
@@ -1209,57 +1212,57 @@ static void effect_sectors_random(void)
 	case 3:
     	for(uint16_t i=0; i<18; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
         break;
 	case 0:
     	for(uint16_t i=126; i<144; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 1:
     	for(uint16_t i=18; i<36; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 7:
     	for(uint16_t i=108; i<126; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	case 5:
     	for(uint16_t i=36; i<54; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 2:
     	for(uint16_t i=90; i<108; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 6:
     	for(uint16_t i=54; i<72; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    		ARGB_SetWhite(i,colourTable[primaryColour].w);
+    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    		ARGB_SetWhite(i,primaryColour.w);
     	}
     break;
 	case 4:
     	for(uint16_t i=72; i<90; i++)
     	{
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
 	}
@@ -1298,8 +1301,8 @@ static void effect_slide_bottom_keepLowest(void)
 	limit=(uint16_t)(((float)LEDCOUNT/((float)modifier-1))*step);
 	for(uint16_t i=0; i<limit; i++)
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
 	ARGB_Show();
 }
@@ -1316,8 +1319,8 @@ static void effect_slide_bottom(void)
 	limit=(uint16_t)(((float)LEDCOUNT/((float)modifier-1))*step);
 	for(uint16_t i=0; i<limit; i++)
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
 	ARGB_Show();
 }
@@ -1333,8 +1336,8 @@ static void effect_slide_top(void)
 	limit=(uint16_t)(((float)LEDCOUNT/((float)modifier-1))*step);
 	for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
 	ARGB_Show();
 }
@@ -1353,16 +1356,16 @@ static void effect_slide_backAndForth_special(void) //ToDo: Double colour - seco
 	{
 		for(uint16_t i=0; i<limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	else
 	{
 		for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1383,16 +1386,16 @@ static void effect_slide_backAndForth(void) //ToDo: Double colour - second colou
 	{
 		for(uint16_t i=0; i<limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	else
 	{
 		for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1413,16 +1416,16 @@ static void effect_slide_backAndForth(void) //ToDo: Double colour - second colou
 	{
 		for(uint16_t i=0; i<limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	else
 	{
 		for(uint16_t i=143; i>143-limit; i--)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1438,18 +1441,18 @@ static void effect_middle(void)
 	}
 	for(uint8_t i=60; i<84; i++) //FILL
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
         for(uint16_t i=59; i>59-step*(64/modifier); i--) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
         for(uint16_t i=84; i<84+step*(64/modifier); i++) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
 
     ARGB_Show();
@@ -1465,13 +1468,13 @@ static void effect_fromMiddle(void)
 	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
     for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
     {
-    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    	ARGB_SetWhite(i,primaryColour.w);
     }
     for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
     {
-    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    	ARGB_SetWhite(i,secondaryColour.w);
     }
 	ARGB_Show();
 }
@@ -1488,13 +1491,13 @@ static void effect_fromMiddle_trueZero(void) //DIMS COMPLETELY IN ZERO
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1514,26 +1517,26 @@ static void effect_fromMiddle_dim(void)
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	else
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1554,26 +1557,26 @@ static void effect_fromMiddle_dim_special(void)
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	else
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1594,26 +1597,26 @@ static void effect_fromMiddle_dim_special2(void)
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	else
 	{
 		for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1632,13 +1635,13 @@ static void effect_fromEdge(void)
 	//{
     for(uint16_t i=0; i<limit; i++)
     {
-    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+    	ARGB_SetWhite(i,primaryColour.w);
     }
     for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
     {
-    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    	ARGB_SetWhite(i,secondaryColour.w);
     }
 	//}
 	ARGB_Show();
@@ -1657,13 +1660,13 @@ static void effect_fromEdge_trueZero(void)
 	{
 		for(uint16_t i=0; i<limit; i++)
 		{
-			ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			ARGB_SetWhite(i,colourTable[primaryColour].w);
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 		for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 		{
-			ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-			ARGB_SetWhite(i,colourTable[secondaryColour].w);
+			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+			ARGB_SetWhite(i,secondaryColour.w);
 		}
 	}
 	ARGB_Show();
@@ -1684,26 +1687,26 @@ static void effect_fromEdge_dim(void)
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	}
 	else
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	ARGB_Show();
@@ -1724,26 +1727,26 @@ static void effect_fromEdge_backAndForth_special(void)
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	else
 	{
 	    for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	ARGB_Show();
@@ -1764,26 +1767,26 @@ static void effect_fromEdge_backAndForth(void)
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	}
 	else
 	{
 	    for(uint16_t i=LEDCOUNT/2+1; i<LEDCOUNT/2+limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	    for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	ARGB_Show();
@@ -1806,26 +1809,26 @@ static void effect_fromEdge_dim_special(void)
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	else
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	}
 	ARGB_Show();
@@ -1846,26 +1849,26 @@ static void effect_fromEdge_dim_special2(void)
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[primaryColour].w);
+	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
 	}
 	else
 	{
 	    for(uint16_t i=0; i<limit; i++)
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
-	    	ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    	ARGB_SetWhite(i,colourTable[secondaryColour].w);
+	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
 	}
 	ARGB_Show();
@@ -1880,10 +1883,10 @@ static void effect_twoDrops_fromEdge(void)
         step=0;
 	}
 	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
-    ARGB_SetRGB(limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    ARGB_SetWhite(limit,colourTable[primaryColour].w);
-    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+    ARGB_SetRGB(limit,primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_SetWhite(limit,primaryColour.w);
+    ARGB_SetRGB(LEDCOUNT-1-limit,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    ARGB_SetWhite(LEDCOUNT-1-limit,secondaryColour.w);
 	ARGB_Show();
 }
 static void effect_twoDrops_buggy(void)
@@ -1895,10 +1898,10 @@ static void effect_twoDrops_buggy(void)
         step=0;
 	}
 	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
-    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
-    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_SetWhite(72-limit,primaryColour.w);
+    ARGB_SetRGB(LEDCOUNT-1-limit,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    ARGB_SetWhite(LEDCOUNT-1-limit,secondaryColour.w);
 	ARGB_Show();
 }
 static void effect_twoDrops_fromMiddle(void)
@@ -1910,10 +1913,10 @@ static void effect_twoDrops_fromMiddle(void)
         step=0;
 	}
 	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
-    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
-    ARGB_SetRGB(72+limit-1,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    ARGB_SetWhite(72+limit-1,colourTable[secondaryColour].w);
+    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_SetWhite(72-limit,primaryColour.w);
+    ARGB_SetRGB(72+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    ARGB_SetWhite(72+limit-1,secondaryColour.w);
 	ARGB_Show();
 }
 static void effect_twoDrops_backAndForth(void)
@@ -1929,17 +1932,17 @@ static void effect_twoDrops_backAndForth(void)
 	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
 	if(direction==0)
 	{
-	    ARGB_SetRGB(72-limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    ARGB_SetWhite(72-limit,colourTable[primaryColour].w);
-	    ARGB_SetRGB(72+limit-1,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    ARGB_SetWhite(72+limit-1,colourTable[secondaryColour].w);
+	    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+	    ARGB_SetWhite(72-limit,primaryColour.w);
+	    ARGB_SetRGB(72+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    ARGB_SetWhite(72+limit-1,secondaryColour.w);
 	}
 	else
 	{
-	    ARGB_SetRGB(limit,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-	    ARGB_SetWhite(limit,colourTable[primaryColour].w);
-	    ARGB_SetRGB(LEDCOUNT-1-limit,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-	    ARGB_SetWhite(LEDCOUNT-1-limit,colourTable[secondaryColour].w);
+	    ARGB_SetRGB(limit,primaryColour.r, primaryColour.g, primaryColour.b);
+	    ARGB_SetWhite(limit,primaryColour.w);
+	    ARGB_SetRGB(LEDCOUNT-1-limit,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    ARGB_SetWhite(LEDCOUNT-1-limit,secondaryColour.w);
 	}
 	ARGB_Show();
 }
@@ -1958,8 +1961,8 @@ static void effect_drops(void)
 	{
 		if(pole[i]!=0)
 		{
-		    ARGB_SetRGB(pole[i],colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		    ARGB_SetWhite(pole[i],colourTable[primaryColour].w);
+		    ARGB_SetRGB(pole[i],primaryColour.r, primaryColour.g, primaryColour.b);
+		    ARGB_SetWhite(pole[i],primaryColour.w);
 		    pole[i]+=2;
 		}
 		if(pole[i]>144)
@@ -1984,24 +1987,24 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 	case 3 ... 4:
 			if(step==0||step==1)
 			{
-			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			    ARGB_FillWhite(colourTable[primaryColour].w);
+			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+			    ARGB_FillWhite(primaryColour.w);
 			}
 		break;
 	case 2:
 	case 5:
 			if(step==2)
 			{
-			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			    ARGB_FillWhite(colourTable[primaryColour].w);
+			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+			    ARGB_FillWhite(primaryColour.w);
 			}
 		break;
 	case 1:
 	case 6:
 			if(step==3)
 			{
-			    ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-			    ARGB_FillWhite(colourTable[primaryColour].w);
+			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+			    ARGB_FillWhite(primaryColour.w);
 			}
 		break;
 	}
@@ -2029,8 +2032,8 @@ static void effect_tubes_true_pingpong(void) //AI GENERATED - only for test
 
     if (TUBENUMBER == active_tube)
     {
-        ARGB_FillRGB(colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-        ARGB_FillWhite(colourTable[primaryColour].w);
+        ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
+        ARGB_FillWhite(primaryColour.w);
     }
 
     ARGB_Show();
@@ -2046,18 +2049,18 @@ static void effect_middle(void) //ToDo: Fix math - according to fromMiddle effec
 	}
 	for(uint8_t i=64; i<80; i++) //FILL
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
         for(uint16_t i=63; i>63-step*(64/modifier); i--) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
         for(uint16_t i=80; i<80+step*(64/modifier); i++) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
 
     ARGB_Show();
@@ -2082,20 +2085,20 @@ static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMidd
 	}
 	for(uint8_t i=64; i<80; i++) //FILL
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
 	if(direction==0)
 	{
         for(uint16_t i=63; i>63-step*4; i--) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
         for(uint16_t i=80; i<80+step*4; i++) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
 	}
     if(direction==1)
@@ -2132,20 +2135,20 @@ static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMidd
 	}
 	for(uint8_t i=64; i<80; i++) //FILL
 	{
-		ARGB_SetRGB(i,colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-		ARGB_SetWhite(i,colourTable[primaryColour].w);
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
 	}
 	if(direction==0)
 	{
         for(uint16_t i=63; i>63-step; i--) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
         for(uint16_t i=80; i<80+step; i++) //DIRECTION
         {
-    		ARGB_SetRGB(i,colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-    		ARGB_SetWhite(i,colourTable[secondaryColour].w);
+    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    		ARGB_SetWhite(i,secondaryColour.w);
         }
 	}
     if(direction==1)
@@ -2190,16 +2193,16 @@ static void effect_middle_bounce2(void) //AI GENERATED!
 
     for(uint16_t i = 64; i < 80; i++)
     {
-        ARGB_SetRGB(i, colourTable[primaryColour].r, colourTable[primaryColour].g, colourTable[primaryColour].b);
-        ARGB_SetWhite(i, colourTable[primaryColour].w);
+        ARGB_SetRGB(i, primaryColour.r, primaryColour.g, primaryColour.b);
+        ARGB_SetWhite(i, primaryColour.w);
     }
 
     for(int16_t i = 63; i >= (63 - (int16_t)expansion); i--)
     {
         if (i >= 0)
         {
-            ARGB_SetRGB(i, colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-            ARGB_SetWhite(i, colourTable[secondaryColour].w);
+            ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+            ARGB_SetWhite(i, secondaryColour.w);
         }
     }
 
@@ -2207,8 +2210,8 @@ static void effect_middle_bounce2(void) //AI GENERATED!
     {
         if (i < LEDCOUNT)
         {
-            ARGB_SetRGB(i, colourTable[secondaryColour].r, colourTable[secondaryColour].g, colourTable[secondaryColour].b);
-            ARGB_SetWhite(i, colourTable[secondaryColour].w);
+            ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+            ARGB_SetWhite(i, secondaryColour.w);
         }
     }
 
@@ -2221,29 +2224,56 @@ void effects_set_timer(uint16_t ARR, uint16_t PSC)
 	__HAL_TIM_SET_AUTORELOAD(htimLocal, ARR);
 	__HAL_TIM_SET_PRESCALER(htimLocal, PSC);
 	__HAL_TIM_SET_COUNTER(htimLocal, 0);
+	htimLocal->Instance->EGR = TIM_EGR_UG;
 }
 
 void effects_set_brightness(uint8_t new_brightness)
-{
-    //brightness=new_brightness;
-    ARGB_SetBrightness(new_brightness);
+{//ToDo: change primaryColourNumber datatype
+    primaryColour=(ColourRGB_t){colourTable[primaryColourNumber].r*new_brightness/255,
+    							colourTable[primaryColourNumber].g*new_brightness/255,
+								colourTable[primaryColourNumber].b*new_brightness/255,
+								colourTable[primaryColourNumber].w*new_brightness/255};
+    secondaryColour=(ColourRGB_t){colourTable[secondaryColourNumber].r*new_brightness/255,
+    							colourTable[secondaryColourNumber].g*new_brightness/255,
+								colourTable[secondaryColourNumber].b*new_brightness/255,
+								colourTable[secondaryColourNumber].w*new_brightness/255};
+    brightness=new_brightness;
+    current_effect_func(); //can be used - animations are drived by steps, not some inner variable; this will immediately rewrite the brightness parameter
 }
 
 void effects_set_tempo(uint8_t new_bpm)
 {
     bpm = new_bpm;
+    step=0;
+    uint16_t ARR;
+    if(ownTempo==0)
+    {
+		ARR=((60.0f/(float)bpm)/multiplier)*MCU_CLOCK/(PSC+1)-1;
+    }
+    //uint16_t arr = (raw_arr > 65535.0f) ? 65535 : (uint16_t)raw_arr;
+	effects_set_timer(ARR, PSC);
 }
 
 void effects_set_primaryColour(ColourName_t new_colour)
 {
-	primaryColour = new_colour;
+    primaryColour=(ColourRGB_t){colourTable[new_colour].r*brightness/255,
+    							colourTable[new_colour].g*brightness/255,
+								colourTable[new_colour].b*brightness/255,
+								colourTable[new_colour].w*brightness/255};
+    primaryColourNumber=new_colour;
 	colourChanged=1;
+	current_effect_func();
 }
 
 void effects_set_secondaryColour(ColourName_t new_colour)
 {
-	secondaryColour = new_colour;
+    secondaryColour=(ColourRGB_t){colourTable[new_colour].r*brightness/255,
+    							colourTable[new_colour].g*brightness/255,
+								colourTable[new_colour].b*brightness/255,
+								colourTable[new_colour].w*brightness/255};
+    secondaryColourNumber=new_colour;
 	colourChanged=1;
+	current_effect_func();
 }
 
 
@@ -2265,13 +2295,17 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	uint16_t ARR;
 	ownTempo=0;
 	colourChanged=0;
+	multiplier=0.1;
+	//step=0;
+    ARGB_Clear();
+	ARGB_Show();
+	ARGB_SetBrightness(255);
     switch (effect1)
     {
         case 0 ... 1: //LIGHTS DOWN //--------------------------------------------------------------
             current_effect_func = effect_lights_down;
             PSC = 21972;
             multiplier = 0.1;
-
             break;
         case 2 ... 3: //STATIC COLOUR
 			current_effect_func = effect_static;
@@ -3023,6 +3057,9 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 		ARR=((60.0f/(float)bpm)/multiplier)*MCU_CLOCK/(PSC+1)-1;
     }
     //uint16_t arr = (raw_arr > 65535.0f) ? 65535 : (uint16_t)raw_arr;
+
+
 	effects_set_timer(ARR, PSC);
+
 	current_effect_func();
 }

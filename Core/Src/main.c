@@ -167,7 +167,7 @@ int main(void)
   HAL_Delay(10);
   SI44_SetInterrupts2(0b00000000);
   HAL_Delay(10);
-  SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
+  //SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
   HAL_Delay(500);
 
 
@@ -178,7 +178,7 @@ int main(void)
   //ARGB_Clear();
   //ARGB_Show();
 
-  //HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim2);
 
   uint8_t testPacket[64];
   testPacket[0]=255;
@@ -188,8 +188,13 @@ int main(void)
   testPacket[4]=0;
   testPacket[5]=0;
   testPacket[6]=0;
+  uint8_t previousPacketRF[64];
 
-  effects_set_effect(82,22); //neošetřenej stav bez efektu?
+  effects_set_primaryColour(100);
+  effects_set_secondaryColour(150);
+  effects_set_tempo(164);
+  effects_set_brightness(255);
+  effects_set_effect(2,1); //neošetřenej stav bez efektu?
   //effects_set_effect(87,57);
 
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
@@ -228,23 +233,40 @@ int main(void)
 	  {
 		  rxDoneFlag=0;
 
-
+		  uint8_t b; //jen pro reset 0x03 registru
+		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
+		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 
 		  SI44_ReadPacket(testPacket);
 		  //ARGB_SetBrightness(255);
 		  //ARGB_Clear();
-		  ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
+		  //ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
 		  //ARGB_FillRGB(testPacket[1], testPacket[2], testPacket[3]);
-		  ARGB_Show();
-		  //effects_set_effect(testPacket[1],testPacket[2]);
+		  //ARGB_Show();
 
-		  char uartBuf[50];  // dostatečně velký buffer
-		  int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
-		  HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
+		  //HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_2);
 
-		  uint8_t b; //jen pro reset 0x03 registru
-		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
-		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
+		  //char uartBuf[50];  // dostatečně velký buffer
+		  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
+		  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
+
+		  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
+		  if(testPacket[2]!=previousPacketRF[2])
+		  effects_set_primaryColour(testPacket[2]);
+		  if(testPacket[3]!=previousPacketRF[3])
+		  effects_set_secondaryColour(testPacket[3]);
+		  if(testPacket[0]!=previousPacketRF[0])
+		  effects_set_tempo(testPacket[0]);
+		  if(testPacket[1]!=previousPacketRF[1])
+		  effects_set_brightness(testPacket[1]);
+		  if(testPacket[4]!=previousPacketRF[4]||testPacket[5]!=previousPacketRF[5])
+		  effects_set_effect(testPacket[4],testPacket[5]);
+
+
+		  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
+
+
+
 	  }
 	  //char uartBuf[50];  // dostatečně velký buffer
 	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
