@@ -45,6 +45,9 @@
 #define AWAKE_PACKET_LENGTH 2
 #define AWAK_PACKET_PERIOD 20 //20ms by default
 
+#define DATA_PACKET 0xAA
+#define CHECK_PACKET 0xBB
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,6 +62,7 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim1_ch1;
 
 UART_HandleTypeDef huart1;
@@ -66,6 +70,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 static volatile uint32_t step=0;
 static volatile uint8_t nextStepFlag = 1;
+uint8_t lastPacketNumber=0;
 //static uint8_t dmxRX[514];
 /* USER CODE END PV */
 
@@ -78,6 +83,7 @@ static void MX_SPI2_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -87,12 +93,20 @@ static void MX_ADC1_Init(void);
 static volatile bool rxDoneFlag=false;
 static uint8_t rx[PLD_SIZE];
 static uint8_t dataPacket[1][6];
+static volatile int8_t signalLost = 0;
+uint8_t tubeNumber;
+
+
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
     	nextStepFlag=1;
+    }
+    else if (htim->Instance == TIM3)
+    {
+    	signalLost=1;
     }
 }
 
@@ -104,6 +118,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	//{
         rxDoneFlag=true; //ToDo: přidat čtecí
 	//}
+}
+
+void set_timer(TIM_HandleTypeDef *htim, uint16_t ARR, uint16_t PSC)
+{
+	__HAL_TIM_SET_AUTORELOAD(htim, ARR);
+	__HAL_TIM_SET_PRESCALER(htim, PSC);
+	__HAL_TIM_SET_COUNTER(htim, 0);
+	htim->Instance->EGR = TIM_EGR_UG;
+}
+
+void reset_timer(TIM_HandleTypeDef *htim)
+{
+	__HAL_TIM_SET_COUNTER(htim, 0);
+}
+
+void DIP_init(TIM_HandleTypeDef *htim)
+{
+	tubeNumber |= (HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP1_Pin)<<0);
+	tubeNumber |= (HAL_GPIO_ReadPin(DIP3_GPIO_Port, DIP3_Pin)<<1);
+	tubeNumber |= (HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP4_Pin)<<2);
 }
 
 /*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
@@ -152,8 +186,9 @@ int main(void)
   MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_ADC1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
   HAL_Delay(500);
   //---SI4432---
@@ -172,13 +207,14 @@ int main(void)
 
 
   //---ARGB effects---
-  effects_init(&htim2); //before timer?
+  effects_init(&htim2, tubeNumber); //before timer?
   //ARGB_Init();
   //ARGB_Clear();
   //ARGB_Clear();
   //ARGB_Show();
 
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
 
   uint8_t testPacket[64];
   testPacket[0]=255;
@@ -190,11 +226,12 @@ int main(void)
   testPacket[6]=0;
   uint8_t previousPacketRF[64];
 
+  effects_set_effect(2,1); //neošetřenej stav bez efektu?
   effects_set_primaryColour(100);
   effects_set_secondaryColour(150);
   effects_set_tempo(164);
   effects_set_brightness(255);
-  effects_set_effect(2,1); //neošetřenej stav bez efektu?
+
   //effects_set_effect(87,57);
 
   //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
@@ -216,6 +253,8 @@ int main(void)
   rxDoneFlag = 0; //EXTREMELY IMPORTANT! Fake IRQ signal probably caused by Si4432 booting up!
   __HAL_GPIO_EXTI_CLEAR_IT(SPI2_IRQ_Pin);
   SI44_ClearRXFIFO();
+
+  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
   SI44_SetRXon();
   /* USER CODE END 2 */
 
@@ -232,8 +271,11 @@ int main(void)
 	  if(rxDoneFlag==1 || HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin) == GPIO_PIN_RESET)
 	  {
 		  rxDoneFlag=0;
+		  reset_timer(&htim3);
 
-		  uint8_t b; //jen pro reset 0x03 registru
+		  //signalRF+=1;
+
+		  uint8_t b; //POZOR NA UMÍSTĚNÍ, MŮŽE ZASEKNOUT LED - původní bug
 		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
 		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 
@@ -250,23 +292,45 @@ int main(void)
 		  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
 		  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 
-		  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
-		  if(testPacket[2]!=previousPacketRF[2])
-		  effects_set_primaryColour(testPacket[2]);
-		  if(testPacket[3]!=previousPacketRF[3])
-		  effects_set_secondaryColour(testPacket[3]);
-		  if(testPacket[0]!=previousPacketRF[0])
-		  effects_set_tempo(testPacket[0]);
-		  if(testPacket[1]!=previousPacketRF[1])
-		  effects_set_brightness(testPacket[1]);
-		  if(testPacket[4]!=previousPacketRF[4]||testPacket[5]!=previousPacketRF[5])
-		  effects_set_effect(testPacket[4],testPacket[5]);
+		  if(testPacket[0]==DATA_PACKET)
+		  {
+			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
+			  if(testPacket[4]!=previousPacketRF[4])
+			  effects_set_primaryColour(testPacket[4]);
+			  if(testPacket[5]!=previousPacketRF[5])
+			  effects_set_secondaryColour(testPacket[5]);
+			  if(testPacket[2]!=previousPacketRF[2])
+			  effects_set_tempo(testPacket[2]);
+			  if(testPacket[3]!=previousPacketRF[3])
+			  effects_set_brightness(testPacket[3]);
+			  if(testPacket[6]!=previousPacketRF[6]||testPacket[7]!=previousPacketRF[7])
+			  effects_set_effect(testPacket[6],testPacket[7]);
+
+			  lastPacketNumber=testPacket[1];
+			  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
+		  }
+		  if(testPacket[0]==CHECK_PACKET)
+		  {
+			  if(testPacket[1]!=lastPacketNumber) //DATA PACKET WAS MISSED
+			  {
+				  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
+				  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
+				  effects_set_effect(0,0);
+			  }
+
+		  }
 
 
-		  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
 
 
-
+	  }
+	  if(signalLost==1)
+	  {
+		  signalLost=0;
+		  effects_set_effect(0,0);
+		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	  }
 	  //char uartBuf[50];  // dostatečně velký buffer
 	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
@@ -566,6 +630,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 7199;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 49999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 

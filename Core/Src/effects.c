@@ -24,6 +24,7 @@ static uint8_t secondaryColourNumber;
 static ColourRGB_t primaryColour = {255, 0, 0, 0}; //20
 static ColourRGB_t secondaryColour = {0, 255, 0, 0}; //102
 static uint32_t step = 0;
+static uint8_t tubeNumber;
 //static uint8_t is_new_effect = 0;
 //static uint8_t brightness=255;
 //static uint8_t modifier = 0;
@@ -37,18 +38,21 @@ static uint8_t colourChanged = 0; //for effects that has to recalculate the infl
 static uint8_t ownTempo=0;  	  //for effects that use fixed individual refresh rate
 static uint8_t modifier2=0;
 
-void effects_init(TIM_HandleTypeDef *htim)
+//Pointer to selected function
+static void (*current_effect_func)(void);
+
+void effects_init(TIM_HandleTypeDef *htim, uint8_t tNumber)
 {
 	htimLocal = htim;
+	tubeNumber=tNumber;
 	//is_new_effect = 1;
 	ARGB_Init();
 	ARGB_Clear();
 	ARGB_Show();
 	ARGB_SetBrightness(255);
+	effects_set_effect(0,0);
 }
 
-//Pointer to selected function
-static void (*current_effect_func)(void);
 
 // --- EFFECT DEFINITIONS ---
 static void effect_lights_down(void)
@@ -1982,7 +1986,7 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 		step=0;
 	}
 	ARGB_Clear();
-	switch(TUBENUMBER)
+	switch(tubeNumber)
 	{
 	case 3 ... 4:
 			if(step==0||step==1)
@@ -2030,7 +2034,7 @@ static void effect_tubes_true_pingpong(void) //AI GENERATED - only for test
         active_tube = 11 - step;
     }
 
-    if (TUBENUMBER == active_tube)
+    if (tubeNumber == active_tube)
     {
         ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
         ARGB_FillWhite(primaryColour.w);
@@ -2298,39 +2302,40 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	multiplier=0.1;
 	//step=0;
     ARGB_Clear();
-	ARGB_Show();
+	//ARGB_Show();
 	ARGB_SetBrightness(255);
     switch (effect1)
     {
         case 0 ... 1: //LIGHTS DOWN //--------------------------------------------------------------
             current_effect_func = effect_lights_down;
             PSC = 21972;
-            multiplier = 0.1;
+            //multiplier = 0.1;
             break;
         case 2 ... 3: //STATIC COLOUR
 			current_effect_func = effect_static;
         	PSC = 21972;
-            multiplier = 0.1;
+            //multiplier = 0.1;
             break;
         case 13 ... 14: //STATIC TWO COLOUR - (CAN USE 0 colour!)
 			current_effect_func = effect_static_two_colour;
         	PSC = 21972;
-            multiplier = 0.1;
+            //multiplier = 0.1;
             break;
         case 15 ... 16: //STATIC TWO COLOUR w BRIGHTNESS
 			//ToDo: maximal brightness should be related to brightness set by DMX channel!
 			current_effect_func = effect_static_two_colour_brightness;
         	PSC = 21972;
-            multiplier = 0.1;
+        	modifier=8;
+            //multiplier = 0.1;
             break;
         case 17 ... 18: //STATIC TWO COLOUR GRADIENT
 			current_effect_func = effect_static_two_colour_gradient;
         	PSC = 21972;
-            multiplier = 0.1;
+            //multiplier = 0.1;
             break;
          case 19 ... 20: //STATIC TWO COLOUR GRADIENT REVERSED
 			current_effect_func = effect_static_two_colour_gradient_2;
-         	multiplier = 1;
+         	//multiplier = 1;
          	PSC = 21972;
          	ownTempo=0;
             break;
