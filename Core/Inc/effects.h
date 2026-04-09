@@ -17,7 +17,7 @@
 
 //extern TIM_HandleTypeDef htim2;
 
-void effects_init(TIM_HandleTypeDef *htim);
+void effects_init(TIM_HandleTypeDef *htim, uint8_t tNumber);
 void effects_set_bpm(uint16_t new_bpm);
 void effects_set_effect(uint8_t effect1, uint8_t effect2);
 void effects_next_step();

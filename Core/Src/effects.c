@@ -2300,6 +2300,8 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	ownTempo=0;
 	colourChanged=0;
 	multiplier=0.1;
+	modifier=1;
+	modifier2=0;
 	//step=0;
     ARGB_Clear();
 	//ARGB_Show();
@@ -2316,33 +2318,569 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
         	PSC = 21972;
             //multiplier = 0.1;
             break;
-        case 13 ... 14: //STATIC TWO COLOUR - (CAN USE 0 colour!)
+        case 4 ... 5: //STATIC TWO COLOUR - (CAN USE 0 colour!)
 			current_effect_func = effect_static_two_colour;
         	PSC = 21972;
             //multiplier = 0.1;
             break;
-        case 15 ... 16: //STATIC TWO COLOUR w BRIGHTNESS
+        case 6 ... 7: //STATIC TWO COLOUR w BRIGHTNESS
 			//ToDo: maximal brightness should be related to brightness set by DMX channel!
 			current_effect_func = effect_static_two_colour_brightness;
         	PSC = 21972;
         	modifier=8;
             //multiplier = 0.1;
             break;
-        case 17 ... 18: //STATIC TWO COLOUR GRADIENT
+        case 8 ... 9: //STATIC TWO COLOUR GRADIENT
 			current_effect_func = effect_static_two_colour_gradient;
         	PSC = 21972;
             //multiplier = 0.1;
             break;
-         case 19 ... 20: //STATIC TWO COLOUR GRADIENT REVERSED
+        case 10 ... 11: //STATIC TWO COLOUR GRADIENT REVERSED
 			current_effect_func = effect_static_two_colour_gradient_2;
-         	//multiplier = 1;
-         	PSC = 21972;
-         	ownTempo=0;
+        	//multiplier = 1;
+        	PSC = 21972;
+        	//ownTempo=0;
             break;
-         case 21 ... 22: //MOVING GRADIENT; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
+        case 12 ... 13: //STATIC RANDOM
+            current_effect_func = effect_random_static;
+            PSC = 21972;
+            //multiplier = 0.1;
+            //ownTempo=0;
+            break;
+
+        case 14 ... 15: //STROBE
+			current_effect_func = effect_strobe;
+        	//modifier=1;
+            switch (effect2)
+            {
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;     PSC=137;   break; //16 changes per beat -> 64
+			}
+            break;
+        case 16 ... 17: //STROBE w FADING
+        	current_effect_func = effect_strobe_fading;
+        	//modifier=1;
+        	//ownTempo=0;
+        	switch (effect2)
+        	{
+				  //case 50 ... 62:  multiplier = 8; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
+				  //case 63 ... 72:  multiplier = 16; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
+				  //case 73 ... 108:  multiplier = 32; PSC=68; current_effect_func = effect_strobe_fading_64;  break; // x32
+				case 0 ... 36:    multiplier = 32; modifier = 1024; PSC=69;  break; // x16
+				case 37 ... 72:   multiplier = 16; modifier = 256; PSC=137;  break; // x16
+				case 73 ... 108:  multiplier = 16; modifier = 128; PSC=137;  break; // x16
+				case 109 ... 144: multiplier = 16; modifier = 64; PSC=137;  break; // x16
+				case 145 ... 180: multiplier = 16; modifier = 32; PSC=137;  break; // x16
+				case 181 ... 216: multiplier = 16; modifier = 16; PSC=137;  break; // x16
+				case 217 ... 255: multiplier = 32; modifier = 16; PSC=69;  break; // x16
+        	}
+        	break;
+        case 18 ... 19: //STROBE TWO COLOURS
+    		current_effect_func = effect_strobe_colours;
+        	//modifier=1;
+        	//ownTempo=0;
+        	switch (effect2)
+        	{
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+        	}
+            break;
+        case 20 ... 21: //SWITCH TWO COLOURS
+     		current_effect_func = effect_switch_colours;
+        	//modifier=1;
+        	//ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 22 ... 23: //SWITCH ODD/EVEN
+       		current_effect_func = effect_odd_even;
+        	//ownTempo=0;
+        	switch (effect2)
+        	{
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+        	}
+        	break;
+        case 24 ... 25: //SECTORS
+        	current_effect_func = effect_sectors;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 26 ... 27: //SECTORS RANDOM
+           	current_effect_func = effect_sectors_random;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;  //------------------------------------------------------------------------------------------------
+        case 28 ... 29: //SECTORS BACK AND FORTH
+        	current_effect_func = effect_sectors_backAndForth;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 30 ... 31: //SECTORS TOGETHER
+           	current_effect_func = effect_sectors_together;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 32 ... 33: //SECTORS FADEIN
+        	current_effect_func = effect_sectors_fadein;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 34 ... 35: //SECTORS RANDOM BLINKING
+           	current_effect_func = effect_sectors_blinking;
+            //modifier=1;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+        case 36 ... 37: //MIDDLE
+           	current_effect_func = effect_middle;
+            modifier=16;
+            //ownTempo=0;
+            switch (effect2)
+            {
+              	case 0 ... 100: multiplier = 16;   modifier=64; PSC=137;   break; //whole note
+    			case 101 ... 200:   multiplier = 16;   modifier=32; PSC=137;  break; //half note
+    			case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
+            }
+            break;
+        case 38 ... 39: //MIDDLE BACK AND FORTH
+           	current_effect_func = effect_middle_bounce1;
+            modifier=16;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+            }
+            break;
+             /* case 55 ... 56:
+           		current_effect_func = effect_middle_bounce2;
+             	modifier=16;
+             	ownTempo=0;
+                switch (effect2)
+                {
+                	case 0 ... 50: multiplier = 32;   modifier=128; PSC=69;   break; //whole note
+                	case 51 ... 100: multiplier = 16;   modifier=32; PSC=137;   break; //quarter note
+    				case 101 ... 200:   multiplier = 16;   modifier=32; PSC=137;  break; //half note
+    				case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
+                }
+                break;*/
+        case 40 ... 41: //SLIDE FROM BOTTOM
+           	current_effect_func = effect_slide_bottom_keepLowest;
+            //ownTempo=0;
+            switch (effect2)
+            {
+              	case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+              	case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+              	case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
+    			case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 42 ... 43:
+           	current_effect_func = effect_slide_bottom;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
+    			case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 44 ... 45:
+            current_effect_func = effect_slide_top;
+            //ownTempo=0;
+            switch (effect2)
+            {
+      			case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+      			case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+      			case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+      			case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+      			case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
+      			case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+      			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+      			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+      			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 46 ... 47:
+           	current_effect_func = effect_slide_backAndForth;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
+    			case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 48 ... 49:
+            current_effect_func = effect_slide_backAndForth_special;
+            //ownTempo=0;
+            switch (effect2)
+            {
+      			case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+      			case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+      			case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+      			case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+      			case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
+      			case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+      			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+      			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+      			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 50 ... 51:
+           	current_effect_func = effect_fromMiddle;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromMiddle_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
+    			case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
+    			case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
+    			case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
+    			case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
+    			case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromMiddle_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
+    			case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
+    			case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
+    			case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+        case 52 ... 53: //ToDo: add trueZero? probably not...
+           	current_effect_func = effect_fromMiddle_dim; //can use blank second colour!
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+        case 54 ... 55: //ToDo: add trueZero?
+           	current_effect_func = effect_fromMiddle_dim_special; //Turns off after each cycle; cant use blank second colour
+            //ownTempo=0;
+            //modifier=0;
+            switch (effect2)
+            {
+    			case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+    			case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+    			case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+    			case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+    			case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+    			case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+    			case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+    			case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+    			case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+    			case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromMiddle_dim_special2;   break; //slow continous
+    			case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //whole - lower res
+    			case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note - lower res
+    			case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note - large blocks
+    			case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromMiddle_dim_special2; break; //quarter note - mid res
+    			case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromMiddle_dim_special2; break; //whole note
+    			case 228 ... 237:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note
+    			case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note
+    			case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromMiddle_dim_special2; break; //16
+            }
+            break;
+        case 56 ... 57:
+           	current_effect_func = effect_fromEdge;
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromEdge_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
+    			case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
+    			case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
+    			case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
+    			case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
+    			case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromEdge_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
+    			case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
+    			case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
+    			case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+        case 58 ... 59: //ToDo: add trueZero? probably not...
+           	current_effect_func = effect_fromEdge_dim; //can use blank second colour!
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }                                                                                                                 //wider center, fully dimmed
+            break;
+        case 60 ... 61: //ToDo: add trueZero?
+           	current_effect_func = effect_fromEdge_dim_special; //Turns off after each cycle; cant use blank second colour
+           	//ownTempo=0;
+            switch (effect2)
+            {
+    			case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+    			case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+    			case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+    			case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+    			case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+    			case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+    			case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+    			case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+    			case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+    			case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_dim_special2;   break; //slow continous
+    			case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //whole - lower res
+    			case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //half note - lower res
+    			case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note - large blocks
+    			case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_dim_special2; break; //quarter note - mid res
+    			case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_dim_special2; break; //whole note
+    			case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //half note
+    			case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note
+    			case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_dim_special2; break; //16
+            }
+            break;
+        case 62 ... 63: //ToDo: add trueZero?
+           	current_effect_func = effect_fromEdge_backAndForth; //Turns off after each cycle; cant use blank second colour
+            //modifier2=0;
+            //ownTempo=0;
+            switch (effect2)
+            {
+      			case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+      			case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+      			case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+      			case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+      			case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+      			case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+      			case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+      			case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+      			case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+      			case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
+      			case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
+      			case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
+      			case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
+      			case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
+      			case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
+      			case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
+      			case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
+      			case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
+      			case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_backAndForth_special;   break; //slow continous
+      			case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //whole - lower res
+      			case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note - lower res
+      			case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note - large blocks
+      			case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_backAndForth_special; break; //quarter note - mid res
+      			case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_backAndForth_special; break; //whole note
+      			case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note
+      			case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note
+      			case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_backAndForth_special; break; //16
+            }
+            break;
+        case 64 ... 65: //ToDo: add trueZero?
+           	current_effect_func = effect_twoDrops_fromMiddle; //Turns off after each cycle; cant use blank second colour
+           	//ownTempo=0;
+            switch (effect2)
+            {
+    			case 0   ... 6: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 7   ... 13: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 14  ... 20: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 21  ... 27: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 28  ... 34: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 35  ... 41: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 42  ... 48: multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 49  ... 55: multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 56  ... 62: multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 63  ... 69: multiplier = 8;  modifier=128;  PSC=274;  current_effect_func = effect_twoDrops_fromEdge;   break; //slow continous
+    			case 70  ... 76: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //whole - lower res
+    			case 77  ... 83: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //half note - lower res
+    			case 84  ... 90: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note - large blocks
+    			case 91  ... 97: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_fromEdge; break; //quarter note - mid res
+    			case 98  ... 104: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_fromEdge; break; //whole note
+    			case 105 ... 111:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //half note
+    			case 112 ... 118:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note
+    			case 119 ... 125:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_fromEdge; break; //16
+    			case 126 ... 132: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_backAndForth;  break; //slow continous
+    			case 133 ... 139: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //whole - lower res
+    			case 140 ... 146: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //half note - lower res
+    			case 147 ... 153: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - large blocks
+    			case 154 ... 160: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - mid res
+    			case 161 ... 167: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_backAndForth; break; //whole note
+    			case 168 ... 174:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_backAndForth;  break; //half note
+    			case 175 ... 181:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note
+    			case 182 ... 188:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_backAndForth; break; //16
+    			case 189 ... 195: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_buggy;   break; //slow continous
+    			case 196 ... 202: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //whole - lower res
+    			case 203 ... 209: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //half note - lower res
+    			case 210 ... 216: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //quarter note - large blocks
+    			case 217 ... 223: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_buggy; break; //quarter note - mid res
+    			case 224 ... 230: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_buggy; break; //whole note
+    			case 231 ... 237:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //half note
+    			case 238 ... 244:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //quarter note
+    			case 245 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_buggy; break; //16
+            }
+            break;
+        case 66 ... 67: //ToDo: add trueZero? probably not...
+           	current_effect_func = effect_drops; //can use blank second colour!
+            //ownTempo=0;
+            switch (effect2)
+            {
+    			case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
+    			case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
+    			case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+    			case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
+    			case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
+    			case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+            }
+            break;
+        case 68 ... 69: //MOVING GRADIENT; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
 			current_effect_func = effect_moving_gradient;
-            colourChanged=1;
-            modifier=1;
+           	colourChanged=1;
+            //modifier=1;
             switch (effect2)
             {
 				case 0 ... 18:    multiplier = 0.25;  PSC=8789;  break;
@@ -2361,10 +2899,10 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 235 ... 255: current_effect_func =effect_moving_gradient_faster; modifier=16; multiplier = 32;    PSC=68;     break;
             }
             break;
-         case 37 ... 38: //MOVING GRADIENT REVERSE; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
+        case 70 ... 71: //MOVING GRADIENT REVERSE; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
 			current_effect_func = effect_moving_gradient_reverse;
             colourChanged=1;
-            modifier=1;
+            //modifier=1;
             switch (effect2)
             {
 				case 0 ... 18:    multiplier = 0.25;  PSC=8789;  break;
@@ -2383,10 +2921,10 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 235 ... 255: current_effect_func =effect_moving_gradient_reverse_faster; modifier=16; multiplier = 32;    PSC=68;     break;
             }
             break;
-         case 23 ... 24: //MOVING GLITCHY GRADIENT
+        case 72 ... 73: //MOVING GLITCHY GRADIENT
 			current_effect_func = effect_glitchy_gradient;
 			colourChanged=1;
-			modifier=1;
+			//modifier=1;
             switch (effect2)
             {
 				case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
@@ -2400,660 +2938,107 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				case 225 ... 255: multiplier = 64;    PSC=34;    break;
             }
             break;
-         case 25 ... 26: //MOVING LINE
+        case 74 ... 75: //MOVING LINE
 			current_effect_func = effect_moving_line;
-            colourChanged=1;
-            modifier=1;
+           	colourChanged=1;
+           	//modifier=1;
             switch (effect2)
             {
-            	case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
-            	case 29 ... 56:   multiplier = 0.5;   PSC=4394;  break;
-            	case 57 ... 84:   multiplier = 1;     PSC=2197;  break;
-            	case 85 ... 112:  multiplier = 2;     PSC=1098;  break;
-            	case 113 ... 140: multiplier = 4;     PSC=549;   break;
-            	case 141 ... 168: multiplier = 8;     PSC=274;   break;
-            	case 169 ... 196: multiplier = 16;    PSC=137;   break;
-            	case 197 ... 224: multiplier = 32;    PSC=68;    break;
-            	case 225 ... 255: multiplier = 64;    PSC=34;    break;
+				case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
+				case 29 ... 56:   multiplier = 0.5;   PSC=4394;  break;
+				case 57 ... 84:   multiplier = 1;     PSC=2197;  break;
+				case 85 ... 112:  multiplier = 2;     PSC=1098;  break;
+				case 113 ... 140: multiplier = 4;     PSC=549;   break;
+				case 141 ... 168: multiplier = 8;     PSC=274;   break;
+				case 169 ... 196: multiplier = 16;    PSC=137;   break;
+				case 197 ... 224: multiplier = 32;    PSC=68;    break;
+				case 225 ... 255: multiplier = 64;    PSC=34;    break;
             }
             break;
-         case 27 ... 28: //MOVING GLITCHY
+        case 76 ... 77: //MOVING GLITCHY
 			current_effect_func = effect_glitchy;
+           	colourChanged=1;
+            //modifier=1;
+           	switch (effect2)
+           	{
+				case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
+				case 29 ... 56:   multiplier = 0.5;   PSC=4394;  break;
+				case 57 ... 84:   multiplier = 1;     PSC=2197;  break;
+				case 85 ... 112:  multiplier = 2;     PSC=1098;  break;
+				case 113 ... 140: multiplier = 4;     PSC=549;   break;
+				case 141 ... 168: multiplier = 8;     PSC=274;   break;
+				case 169 ... 196: multiplier = 16;    PSC=137;   break;
+				case 197 ... 224: multiplier = 32;    PSC=68;    break;
+				case 225 ... 255: multiplier = 64;    PSC=34;    break;
+           	}
+           	break;
+        case 78 ... 79: //MOVING DOTS
+         	current_effect_func = effect_moving_dots;
             colourChanged=1;
-            modifier=1;
             switch (effect2)
             {
-            	case 0 ... 28:    multiplier = 0.25;  PSC=8789;  break;
-            	case 29 ... 56:   multiplier = 0.5;   PSC=4394;  break;
-            	case 57 ... 84:   multiplier = 1;     PSC=2197;  break;
-            	case 85 ... 112:  multiplier = 2;     PSC=1098;  break;
-            	case 113 ... 140: multiplier = 4;     PSC=549;   break;
-            	case 141 ... 168: multiplier = 8;     PSC=274;   break;
-            	case 169 ... 196: multiplier = 16;    PSC=137;   break;
-            	case 197 ... 224: multiplier = 32;    PSC=68;    break;
-            	case 225 ... 255: multiplier = 64;    PSC=34;    break;
-            }
+    			case 0 ... 13:    multiplier = 8;   PSC=274;   modifier=3;   break;
+    			case 14 ... 27:   multiplier = 16;  PSC=137;   modifier=3;   break;
+    			case 28 ... 41:   multiplier = 32;  PSC=68;    modifier=3;   break;
+    			case 42 ... 55:   multiplier = 64;  PSC=34;    modifier=3;   break;
+    			case 56 ... 69:   multiplier = 8;   PSC=274;   modifier=5;   break;
+    			case 70 ... 83:   multiplier = 16;  PSC=137;   modifier=5;   break;
+    			case 84 ... 97:   multiplier = 32;  PSC=68;    modifier=5;   break;
+    			case 98 ... 111:  multiplier = 64;  PSC=34;    modifier=5;   break;
+    			case 112 ... 125: multiplier = 8;   PSC=274;   modifier=8;   break;
+    			case 126 ... 139: multiplier = 16;  PSC=137;   modifier=8;   break;
+    			case 140 ... 153: multiplier = 32;  PSC=68;    modifier=8;   break;
+    			case 154 ... 167: multiplier = 64;  PSC=34;    modifier=8;   break;
+    			case 168 ... 181: multiplier = 8;   PSC=274;   modifier=10;  break;
+    			case 182 ... 195: multiplier = 16;  PSC=137;   modifier=10;  break;
+    			case 196 ... 209: multiplier = 32;  PSC=68;    modifier=10;  break;
+    			case 210 ... 223: multiplier = 64;  PSC=34;    modifier=10;  break;
+    			case 224 ... 237: multiplier = 16;  PSC=137;   modifier=16;  break;
+    			case 238 ... 255: multiplier = 32;  PSC=68;    modifier=16;  break;
+    		}
             break;
-         case 29 ... 30: //MOVING DOTS
-     		current_effect_func = effect_moving_dots;
-         	colourChanged=1;
-            switch (effect2)
-            {
-				case 0 ... 13:    multiplier = 8;   PSC=274;   modifier=3;   break;
-				case 14 ... 27:   multiplier = 16;  PSC=137;   modifier=3;   break;
-				case 28 ... 41:   multiplier = 32;  PSC=68;    modifier=3;   break;
-				case 42 ... 55:   multiplier = 64;  PSC=34;    modifier=3;   break;
-				case 56 ... 69:   multiplier = 8;   PSC=274;   modifier=5;   break;
-				case 70 ... 83:   multiplier = 16;  PSC=137;   modifier=5;   break;
-				case 84 ... 97:   multiplier = 32;  PSC=68;    modifier=5;   break;
-				case 98 ... 111:  multiplier = 64;  PSC=34;    modifier=5;   break;
-				case 112 ... 125: multiplier = 8;   PSC=274;   modifier=8;   break;
-				case 126 ... 139: multiplier = 16;  PSC=137;   modifier=8;   break;
-				case 140 ... 153: multiplier = 32;  PSC=68;    modifier=8;   break;
-				case 154 ... 167: multiplier = 64;  PSC=34;    modifier=8;   break;
-				case 168 ... 181: multiplier = 8;   PSC=274;   modifier=10;  break;
-				case 182 ... 195: multiplier = 16;  PSC=137;   modifier=10;  break;
-				case 196 ... 209: multiplier = 32;  PSC=68;    modifier=10;  break;
-				case 210 ... 223: multiplier = 64;  PSC=34;    modifier=10;  break;
-				case 224 ... 237: multiplier = 16;  PSC=137;   modifier=16;  break;
-				case 238 ... 255: multiplier = 32;  PSC=68;    modifier=16;  break;
-			}
-            break;
-         case 31 ... 32: //JUMPING
+        case 80 ... 81: //JUMPING
      		current_effect_func = effect_jumping;
-         	modifier=1;
-         	ARR=11110;
-         	PSC=47;
-         	ownTempo=1;
-         	break;
-         case 33 ... 34: //JUMPING OWN
-     		current_effect_func = effect_jumping_own;
-         	modifier=1;
-         	ARR=10457;
-         	PSC=50;
-         	ownTempo=1;
-         	break;
-         case 35 ... 36: //FALLING DROP
+        	//modifier=1;
+        	ARR=11110;
+        	PSC=47;
+        	ownTempo=1;
+        	break;
+        case 82 ... 83: //JUMPING OWN
+     	current_effect_func = effect_jumping_own;
+        	//modifier=1;
+        	ARR=10457;
+        	PSC=50;
+        	ownTempo=1;
+        	break;
+        case 84 ... 85: //FALLING DROP
      		current_effect_func = effect_falling_drop;
-         	modifier=1;
-         	colourChanged=1;
-         	switch (effect2)
-            {
-            	case 0 ... 51: multiplier = 9;        PSC=244;   break;
-            	case 52 ... 102: multiplier = 18;     PSC=122;   break;
-            	case 103 ... 153: multiplier = 36;    PSC=61;    break;
-            	case 154 ... 204: multiplier = 72;    PSC=30;    break;
-            	case 205 ... 255: multiplier = 144;   PSC=14;    break;
-            }
-         	break;
-
-        case 5 ... 6: //STROBE
-			current_effect_func = effect_strobe;
-        	modifier=1;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;     PSC=137;   break; //16 changes per beat -> 64
-			}
-            break;
-         case 7 ... 8: //STROBE TWO COLOURS
-    		current_effect_func = effect_strobe_colours;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-			}
-            break;
-         case 9 ... 10: //SWITCH TWO COLOURS
-     		current_effect_func = effect_switch_colours;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-			}
-            break;
-         case 11 ... 12: //SWITCH ODD/EVEN
-       		current_effect_func = effect_odd_even;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-            }
-            break;
-         case 39 ... 40: //STROBE w FADING
-       		current_effect_func = effect_strobe_fading;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-               //case 50 ... 62:  multiplier = 8; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
-               //case 63 ... 72:  multiplier = 16; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
-               //case 73 ... 108:  multiplier = 32; PSC=68; current_effect_func = effect_strobe_fading_64;  break; // x32
-        		case 0 ... 36:    multiplier = 32; modifier = 1024; PSC=69;  break; // x16
-            	case 37 ... 72:   multiplier = 16; modifier = 256; PSC=137;  break; // x16
-            	case 73 ... 108:  multiplier = 16; modifier = 128; PSC=137;  break; // x16
-            	case 109 ... 144: multiplier = 16; modifier = 64; PSC=137;  break; // x16
-            	case 145 ... 180: multiplier = 16; modifier = 32; PSC=137;  break; // x16
-            	case 181 ... 216: multiplier = 16; modifier = 16; PSC=137;  break; // x16
-            	case 217 ... 255: multiplier = 32; modifier = 16; PSC=69;  break; // x16
-
-            }
-            break;
-          case 41 ... 42: //SECTORS
-       		current_effect_func = effect_sectors;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-            }
-            break;
-          case 43 ... 44: //SECTORS RANDOM
-       		current_effect_func = effect_sectors_random;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-            }
-            break;  //------------------------------------------------------------------------------------------------
-         case 57 ... 58: //SECTORS BACK AND FORTH
-       		current_effect_func = effect_sectors_backAndForth;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-            }
-            break;
-          case 59 ... 60: //SECTORS TOGETHER
-       		current_effect_func = effect_sectors_together;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-            }
-            break;
-          case 45 ... 46: //SECTORS FADEIN
-         		current_effect_func = effect_sectors_fadein;
-           	modifier=1;
-           	ownTempo=0;
-              switch (effect2)
-              {
-  				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-  				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-  				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-  				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-  				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-  				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-  				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-              }
-              break;
-          case 47 ... 48: //SECTORS RANDOM BLINKING
-       		current_effect_func = effect_sectors_blinking;
-         	modifier=1;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-
-            }
-            break;
-          case 49 ... 50: //MIDDLE
-       		current_effect_func = effect_middle;
-         	modifier=16;
-         	ownTempo=0;
-            switch (effect2)
-            {
-            	case 0 ... 100: multiplier = 16;   modifier=64; PSC=137;   break; //whole note
-				case 101 ... 200:   multiplier = 16;   modifier=32; PSC=137;  break; //half note
-				case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
-            }
-            break;
-          case 53 ... 54: //MIDDLE BACK AND FORTH
-       		current_effect_func = effect_middle_bounce1;
-         	modifier=16;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-				case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-				case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-				case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-				case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-				case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-				case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
-            }
-            break;
-         /* case 55 ... 56:
-       		current_effect_func = effect_middle_bounce2;
-         	modifier=16;
-         	ownTempo=0;
-            switch (effect2)
-            {
-            	case 0 ... 50: multiplier = 32;   modifier=128; PSC=69;   break; //whole note
-            	case 51 ... 100: multiplier = 16;   modifier=32; PSC=137;   break; //quarter note
-				case 101 ... 200:   multiplier = 16;   modifier=32; PSC=137;  break; //half note
-				case 201 ... 255:  multiplier = 16;   modifier=16; PSC=137;  break; //quarter
-            }
-            break;*/
-         case 55 ... 56: //SLIDE FROM BOTTOM
-       		current_effect_func = effect_slide_bottom_keepLowest;
-         	ownTempo=0;
-            switch (effect2)
-            {
-            	case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-            	case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-            	case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }
-            break;
-          case 61 ... 62:
-       		current_effect_func = effect_slide_bottom;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }
-            break;
-          case 63 ... 64:
-         		current_effect_func = effect_slide_top;
-           	ownTempo=0;
-              switch (effect2)
-              {
-  				case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-  				case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-  				case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-  				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-  				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-  				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-  				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-  				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-  				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-              }
-              break;
-          case 65 ... 66:
-       		current_effect_func = effect_slide_backAndForth;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }
-            break;
-          case 67 ... 68:
-         		current_effect_func = effect_slide_backAndForth_special;
-           	ownTempo=0;
-              switch (effect2)
-              {
-  				case 0 ... 28:     multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-  				case 29 ... 56:    multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-  				case 57 ... 84:    multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-  				case 85 ... 112:   multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-  				case 113 ... 140:  multiplier = 8;  modifier=16;   PSC=274;   break; //half note - mid res
-  				case 141 ... 168:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-  				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-  				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-  				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-              }
-              break;
-          case 69 ... 70:
-       		current_effect_func = effect_fromMiddle;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-				case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromMiddle_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
-				case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
-				case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
-				case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromMiddle_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
-				case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromMiddle_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
-				case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromMiddle_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
-				case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
-				case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
-				case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromMiddle_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
-            }                                                                                                                 //wider center, fully dimmed
-            break;
-          case 71 ... 72: //ToDo: add trueZero? probably not...
-       		current_effect_func = effect_fromMiddle_dim; //can use blank second colour!
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }                                                                                                                 //wider center, fully dimmed
-            break;
-          case 73 ... 74: //ToDo: add trueZero?
-       		current_effect_func = effect_fromMiddle_dim_special; //Turns off after each cycle; cant use blank second colour
-         	ownTempo=0;
-         	modifier=0;
-            switch (effect2)
-            {
-				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
-				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
-				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
-				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
-				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
-				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
-				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
-				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
-				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
-				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromMiddle_dim_special2;   break; //slow continous
-				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //whole - lower res
-				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note - lower res
-				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note - large blocks
-				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromMiddle_dim_special2; break; //quarter note - mid res
-				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromMiddle_dim_special2; break; //whole note
-				case 228 ... 237:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //half note
-				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromMiddle_dim_special2;  break; //quarter note
-				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromMiddle_dim_special2; break; //16
-            }
-            break;
-          case 75 ... 76:
-       		current_effect_func = effect_fromEdge;
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0   ... 14:  multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 15  ... 29:  multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 30  ... 43:  multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 44  ... 58:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 59  ... 72:  multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 73  ... 87:  multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 88  ... 101:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 102 ... 116:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 117 ... 130:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-				case 131 ... 145:  multiplier = 8;  modifier=128; current_effect_func = effect_fromEdge_trueZero;   PSC=274;   break; //slow continous        //wider center, fully dimmed
-				case 146 ... 159:  multiplier = 4;  modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //whole - lower res              //wider center, fully dimmed
-				case 160 ... 174:  multiplier = 4;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //half note - lower res          //wider center, fully dimmed
-				case 175 ... 188:  multiplier = 4;  modifier=4;   current_effect_func = effect_fromEdge_trueZero;   PSC=549;   break; //quarter note - large blocks    //wider center, fully dimmed
-				case 189 ... 203:  multiplier = 8;  modifier=8;   current_effect_func = effect_fromEdge_trueZero;  PSC=274;   break; //quarter note - mid res          //wider center, fully dimmed
-				case 204 ... 217:  multiplier = 16; modifier=64;  current_effect_func = effect_fromEdge_trueZero;  PSC=137;   break; //whole note                      //wider center, fully dimmed
-				case 218 ... 232:  multiplier = 16; modifier=32;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //half note                       //wider center, fully dimmed
-				case 233 ... 246:  multiplier = 16; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=137;  break; //quarter note                    //wider center, fully dimmed
-				case 247 ... 255:  multiplier = 32; modifier=16;  current_effect_func = effect_fromEdge_trueZero;   PSC=69;  break; //16                               //wider center, fully dimmed
-            }                                                                                                                 //wider center, fully dimmed
-            break;
-          case 77 ... 78: //ToDo: add trueZero? probably not...
-       		current_effect_func = effect_fromEdge_dim; //can use blank second colour!
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }                                                                                                                 //wider center, fully dimmed
-            break;
-          case 79 ... 80: //ToDo: add trueZero?
-       		current_effect_func = effect_fromEdge_dim_special; //Turns off after each cycle; cant use blank second colour
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
-				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
-				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
-				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
-				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
-				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
-				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
-				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
-				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
-				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_dim_special2;   break; //slow continous
-				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //whole - lower res
-				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //half note - lower res
-				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note - large blocks
-				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_dim_special2; break; //quarter note - mid res
-				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_dim_special2; break; //whole note
-				case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //half note
-				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_dim_special2;  break; //quarter note
-				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_dim_special2; break; //16
-            }
-            break;
-          case 81 ... 82: //ToDo: add trueZero?
-         	  current_effect_func = effect_fromEdge_backAndForth; //Turns off after each cycle; cant use blank second colour
-          	  modifier2=0;
-          	  ownTempo=0;
-              switch (effect2)
-              {
-  				case 0   ... 9: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-  				case 10  ... 18: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-  				case 19  ... 28: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-  				case 29  ... 37: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-  				case 38  ... 47: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-  				case 48  ... 56: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-  				case 57  ... 66:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-  				case 67  ... 75:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-  				case 76  ... 85:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-  				case 86  ... 94: multiplier = 8;  modifier=128;  PSC=274; modifier2=1;   break; //slow continous
-  				case 95  ... 104: multiplier = 4;  modifier=16;   PSC=549; modifier2=1;  break; //whole - lower res
-  				case 105 ... 113: multiplier = 4;  modifier=8;    PSC=549; modifier2=1;  break; //half note - lower res
-  				case 114 ... 123: multiplier = 4;  modifier=4;    PSC=549; modifier2=1;  break; //quarter note - large blocks
-  				case 124 ... 132: multiplier = 8;  modifier=8;   PSC=274;  modifier2=1; break; //quarter note - mid res
-  				case 133 ... 142: multiplier = 16; modifier=64;  PSC=137;  modifier2=1; break; //whole note
-  				case 143 ... 151:  multiplier = 16; modifier=32;  PSC=137; modifier2=1;  break; //half note
-  				case 152 ... 161:  multiplier = 16; modifier=16;  PSC=137; modifier2=1;  break; //quarter note
-  				case 162 ... 170:  multiplier = 32; modifier=16;  PSC=69;  modifier2=1; break; //16
-  				case 171 ... 180: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_fromEdge_backAndForth_special;   break; //slow continous
-  				case 181 ... 189: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //whole - lower res
-  				case 190 ... 199: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note - lower res
-  				case 200 ... 208: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note - large blocks
-  				case 209 ... 218: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_fromEdge_backAndForth_special; break; //quarter note - mid res
-  				case 219 ... 227: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_fromEdge_backAndForth_special; break; //whole note
-  				case 228 ... 237:   multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //half note
-  				case 238 ... 246:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_fromEdge_backAndForth_special;  break; //quarter note
-  				case 247 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_fromEdge_backAndForth_special; break; //16
-              }
-              break;
-          case 83 ... 84: //ToDo: add trueZero?
-       		current_effect_func = effect_twoDrops_fromMiddle; //Turns off after each cycle; cant use blank second colour
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0   ... 6: multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 7   ... 13: multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 14  ... 20: multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 21  ... 27: multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 28  ... 34: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 35  ... 41: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 42  ... 48: multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 49  ... 55: multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 56  ... 62: multiplier = 32; modifier=16;  PSC=69;   break; //16
-				case 63  ... 69: multiplier = 8;  modifier=128;  PSC=274;  current_effect_func = effect_twoDrops_fromEdge;   break; //slow continous
-				case 70  ... 76: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //whole - lower res
-				case 77  ... 83: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //half note - lower res
-				case 84  ... 90: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note - large blocks
-				case 91  ... 97: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_fromEdge; break; //quarter note - mid res
-				case 98  ... 104: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_fromEdge; break; //whole note
-				case 105 ... 111:  multiplier = 16; modifier=32;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //half note
-				case 112 ... 118:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_fromEdge;  break; //quarter note
-				case 119 ... 125:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_fromEdge; break; //16
-				case 126 ... 132: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_backAndForth;  break; //slow continous
-				case 133 ... 139: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //whole - lower res
-				case 140 ... 146: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //half note - lower res
-				case 147 ... 153: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - large blocks
-				case 154 ... 160: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_backAndForth; break; //quarter note - mid res
-				case 161 ... 167: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_backAndForth; break; //whole note
-				case 168 ... 174:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_backAndForth;  break; //half note
-				case 175 ... 181:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_backAndForth; break; //quarter note
-				case 182 ... 188:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_backAndForth; break; //16
-				case 189 ... 195: multiplier = 8;  modifier=128;  PSC=274; current_effect_func = effect_twoDrops_buggy;   break; //slow continous
-				case 196 ... 202: multiplier = 4;  modifier=16;   PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //whole - lower res
-				case 203 ... 209: multiplier = 4;  modifier=8;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //half note - lower res
-				case 210 ... 216: multiplier = 4;  modifier=4;    PSC=549; current_effect_func = effect_twoDrops_buggy;  break; //quarter note - large blocks
-				case 217 ... 223: multiplier = 8;  modifier=8;   PSC=274;  current_effect_func = effect_twoDrops_buggy; break; //quarter note - mid res
-				case 224 ... 230: multiplier = 16; modifier=64;  PSC=137;  current_effect_func = effect_twoDrops_buggy; break; //whole note
-				case 231 ... 237:   multiplier = 16; modifier=32; PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //half note
-				case 238 ... 244:  multiplier = 16; modifier=16;  PSC=137; current_effect_func = effect_twoDrops_buggy;  break; //quarter note
-				case 245 ... 255:  multiplier = 32; modifier=16;  PSC=69;  current_effect_func = effect_twoDrops_buggy; break; //16
-            }
-            break;
-         case 85 ... 86: //ToDo: add trueZero? probably not...
-       		current_effect_func = effect_drops; //can use blank second colour!
-         	ownTempo=0;
-            switch (effect2)
-            {
-				case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-				case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-				case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-				case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-				case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-				case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-				case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-				case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-				case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
-            }
-            break;
-          case 87 ... 88: //ToDo: add trueZero? probably not...
+        	//modifier=1;
+        	colourChanged=1;
+        	switch (effect2)
+        	{
+				case 0 ... 51: multiplier = 9;        PSC=244;   break;
+				case 52 ... 102: multiplier = 18;     PSC=122;   break;
+				case 103 ... 153: multiplier = 36;    PSC=61;    break;
+				case 154 ... 204: multiplier = 72;    PSC=30;    break;
+				case 205 ... 255: multiplier = 144;   PSC=14;    break;
+        	}
+        	break;
+        case 86 ... 87: //ToDo: add trueZero? probably not...
        		current_effect_func = effect_tubes; //can use blank second colour!
-         	ownTempo=0;
-			multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
+        	//ownTempo=0;
+			multiplier = 4;
+			modifier=8;
+			PSC=549;
+			break; //half note - lower res
 
-          case 89 ... 90: //ToDo: add trueZero? probably not...
+        case 88 ... 89: //ToDo: add trueZero? probably not...
        		current_effect_func = effect_tubes_true_pingpong; //can use blank second colour!
-         	ownTempo=0;
-			multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-
-
-          case 51 ... 52: //STATIC RADOM
-                current_effect_func = effect_random_static;
-                PSC = 21972;
-                multiplier = 0.1;
-                ownTempo=0;
-            break;
-            //Chcci aby tukal kazdou dobu (x1), ale nastavim (x16) a v sestnacti dam podminku, ktera urci tukani te 1x
-
-          //SLIDE TWO COLOURS
-          //SLID IN STATIC - with different speeds of slide
-          //SWITCH TWO COLOURS CONTINOUSLY - změna tempa vždycky se spuštěním -> na 100 kroků rychle a pak změna - tempo zvolit podle maximální obnovovačky pásku - možnost volby rychlosti změny
-          //PULSE IN BRIGHTNESS - with different speeds
-          //ODMRKÁVÁNÍ
-          //BLIKÁNÍ NA ID
-          //Efekty ze starého
-          //BLIKAČKA SEKTORŮ
-          //POSTUPNÝ NAJÍŽDĚNÍ -NEJDŘÍV ZAPNOUT HODNĚ RYCHLEJ ČASOVAČ - PROJET TŘEBA STO KROKŮ A V POSLEDNÍM ČASOVAČ ZPOMALIT NA STATICKOU BARVU
-          //Výbuch - opačně
-          //
-
+        	//ownTempo=0;
+			multiplier = 4;
+			modifier=8;
+			PSC=549;
+			break; //half note - lower res
     }
     //is_new_effect = 0;
     step = 0;
