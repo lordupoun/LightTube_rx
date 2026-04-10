@@ -94,6 +94,7 @@ static volatile bool rxDoneFlag=false;
 static uint8_t rx[PLD_SIZE];
 static uint8_t dataPacket[1][6];
 static volatile int8_t signalLost = 0;
+volatile float current_battery_voltage = 24.0f; // Počáteční bezpečná hodnota
 uint8_t tubeNumber;
 
 
@@ -138,6 +139,19 @@ void DIP_init(TIM_HandleTypeDef *htim)
 	tubeNumber |= (HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP1_Pin)<<0);
 	tubeNumber |= (HAL_GPIO_ReadPin(DIP3_GPIO_Port, DIP3_Pin)<<1);
 	tubeNumber |= (HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP4_Pin)<<2);
+	tubeNumber+=1;
+}
+
+
+float get_battery_voltage()
+{
+	uint32_t adc_value = HAL_ADC_GetValue(&hadc1);
+	//ADC_VALUE*Vref / ADC_RESOLUTION
+	float v_pin = (adc_value * 3.3f) / 4095.0f;
+	//VOLTAGE DIVIDER -> (R7+R8)/R8 = (470k+82k)/82k = 6.7317f
+	float v_battery = v_pin * 6.7317f;
+	//HAL_ADC_Start(&hadc1);
+	return v_battery;
 }
 
 /*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
@@ -188,6 +202,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  HAL_ADC_Start(&hadc1);
   HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
   HAL_Delay(500);
@@ -215,6 +230,10 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
+
+  bool changesMade=1;
+  bool afterDataLost=0;
+
 
   uint8_t testPacket[64];
   testPacket[0]=255;
@@ -298,16 +317,38 @@ int main(void)
 			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
 			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
 			  if(testPacket[4]!=previousPacketRF[4])
-			  effects_set_primaryColour(testPacket[4]);
+			  {
+				  effects_set_primaryColour(testPacket[4]);
+				  changesMade=true;
+			  }
 			  if(testPacket[5]!=previousPacketRF[5])
-			  effects_set_secondaryColour(testPacket[5]);
+			  {
+				  effects_set_secondaryColour(testPacket[5]);
+				  changesMade=true;
+			  }
 			  if(testPacket[2]!=previousPacketRF[2])
-			  effects_set_tempo(testPacket[2]);
+			  {
+				  effects_set_tempo(testPacket[2]);
+				  changesMade=true;
+			  }
 			  if(testPacket[3]!=previousPacketRF[3])
-			  effects_set_brightness(testPacket[3]);
-			  if(testPacket[6]!=previousPacketRF[6]||testPacket[7]!=previousPacketRF[7])
-			  effects_set_effect(testPacket[6],testPacket[7]);
-
+			  {
+				  effects_set_brightness(testPacket[3]);
+				  changesMade=true;
+			  }
+			  if(testPacket[6]!=previousPacketRF[6]||testPacket[7]!=previousPacketRF[7]||afterDataLost==true)
+			  {
+				  effects_set_effect(testPacket[6],testPacket[7]);
+				  changesMade=true;
+				  afterDataLost=0; //Needed to reapply the same values after desynchronization
+			  }
+			  //current_effect_func() should apply new values only, if there was a change
+			  //However after loss of data packet, no change is needed - the same signal can be reapplied (afterDataLost=true)
+			  if(changesMade==true)
+			  {
+				  changesMade=0;
+				  effects_apply_values();
+			  }
 			  lastPacketNumber=testPacket[1];
 			  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
 		  }
@@ -315,23 +356,31 @@ int main(void)
 		  {
 			  if(testPacket[1]!=lastPacketNumber) //DATA PACKET WAS MISSED
 			  {
+				  //lastPacketNumber=testPacket[1];
+				  afterDataLost=1;
 				  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 				  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 				  effects_set_effect(0,0);
 			  }
 
 		  }
-
-
-
-
 	  }
 	  if(signalLost==1)
 	  {
 		  signalLost=0;
+		  afterDataLost=1;
 		  effects_set_effect(0,0);
 		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	  }
+	  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
+	  if(get_battery_voltage()<15.5f)
+	  {
+			  effects_set_effect(0,0);
+			  HAL_Delay(500);
+			  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
+			  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+			  HAL_PWR_EnterSTANDBYMode();
+		  }
 	  //char uartBuf[50];  // dostatečně velký buffer
 	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
 	  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);

@@ -9,6 +9,7 @@
  *      The time between ARGB_Show shouldn't go under 6ms (for 144LED) otherwise the effect won't show correctly
  *
  */
+//ToDo: Colour in effects shouldn't be hardcoded into primary and secondary, but switched in a universal variable inside a switch statement
 #include "effects.h"
 #include "math.h"
 #include <stdlib.h> // Nutné pro funkci rand()
@@ -493,7 +494,7 @@ static void effect_glitchy(void) //made thx to a bug... don't judge the code...
 
 static void effect_strobe(void)
 {
-    if (step==0)
+    if (step==1)
     {
         ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
         ARGB_FillWhite(primaryColour.w);
@@ -1275,8 +1276,7 @@ static void effect_sectors_random(void)
 
 void effect_random_static(void)
 {
-	static uint8_t isDone=0;
-	if(isDone==0)
+	if(colourChanged==1)
 	{
 		for (uint16_t i = 0; i < LEDCOUNT; i++)
 		{
@@ -1290,17 +1290,17 @@ void effect_random_static(void)
 			ARGB_SetWhite(i, w);
 		}
 		ARGB_Show();
-		isDone=1;
+		colourChanged=0;
 	}
 }
-static void effect_slide_bottom_keepLowest(void)
+static void effect_slide_bottom_keep(void)
 {
 	uint16_t limit;
 	if(step>modifier-1)
 	{
         step=0;
         //limit=0;
-        ARGB_Clear();
+        //ARGB_Clear();
 	}
 	limit=(uint16_t)(((float)LEDCOUNT/((float)modifier-1))*step);
 	for(uint16_t i=0; i<limit; i++)
@@ -1313,6 +1313,7 @@ static void effect_slide_bottom_keepLowest(void)
 
 static void effect_slide_bottom(void)
 {
+
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -2242,7 +2243,7 @@ void effects_set_brightness(uint8_t new_brightness)
 								colourTable[secondaryColourNumber].b*new_brightness/255,
 								colourTable[secondaryColourNumber].w*new_brightness/255};
     brightness=new_brightness;
-    current_effect_func(); //can be used - animations are drived by steps, not some inner variable; this will immediately rewrite the brightness parameter
+    //current_effect_func(); //can be used - animations are drived by steps, not some inner variable; this will immediately rewrite the brightness parameter
 }
 
 void effects_set_tempo(uint8_t new_bpm)
@@ -2266,7 +2267,7 @@ void effects_set_primaryColour(ColourName_t new_colour)
 								colourTable[new_colour].w*brightness/255};
     primaryColourNumber=new_colour;
 	colourChanged=1;
-	current_effect_func();
+	//current_effect_func();
 }
 
 void effects_set_secondaryColour(ColourName_t new_colour)
@@ -2277,7 +2278,7 @@ void effects_set_secondaryColour(ColourName_t new_colour)
 								colourTable[new_colour].w*brightness/255};
     secondaryColourNumber=new_colour;
 	colourChanged=1;
-	current_effect_func();
+	//current_effect_func();
 }
 
 
@@ -2291,6 +2292,10 @@ void effects_next_step(void)
 
 
     //}
+}
+void effects_apply_values(void)
+{
+	current_effect_func();
 }
 
 // --- DMX DECODE ---
@@ -2344,6 +2349,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
         case 12 ... 13: //STATIC RANDOM
             current_effect_func = effect_random_static;
             PSC = 21972;
+            colourChanged=1;
             //multiplier = 0.1;
             //ownTempo=0;
             break;
@@ -2553,7 +2559,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
                 }
                 break;*/
         case 40 ... 41: //SLIDE FROM BOTTOM
-           	current_effect_func = effect_slide_bottom_keepLowest;
+           	current_effect_func = effect_slide_bottom_keep;
             //ownTempo=0;
             switch (effect2)
             {
@@ -2568,6 +2574,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
     			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
             }
             break;
+        //ToDo: Effect Slide bottom that overdraws with secondaryColour from the same direction
         case 42 ... 43:
            	current_effect_func = effect_slide_bottom;
             //ownTempo=0;
@@ -3051,5 +3058,5 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 
 	effects_set_timer(ARR, PSC);
 
-	current_effect_func();
+	//current_effect_func();
 }
