@@ -67,8 +67,8 @@ void Error_Handler(void);
 #define LED_RED_GPIO_Port GPIOB
 #define LED_Pin GPIO_PIN_2
 #define LED_GPIO_Port GPIOB
-#define SPI2_ShutDN_Pin GPIO_PIN_10
-#define SPI2_ShutDN_GPIO_Port GPIOB
+#define SPI2_GPIO_ShutDN_Pin GPIO_PIN_10
+#define SPI2_GPIO_ShutDN_GPIO_Port GPIOB
 #define SPI2_IRQ_Pin GPIO_PIN_11
 #define SPI2_IRQ_GPIO_Port GPIOB
 #define SPI2_IRQ_EXTI_IRQn EXTI15_10_IRQn

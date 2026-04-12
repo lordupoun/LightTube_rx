@@ -16,6 +16,8 @@
 
 #define LEDCOUNT 144
 #define MCU_CLOCK 72000000.0f
+#define MIX_EFFECTS 1 //If == 1; various effect can mix with each other when transitioning (only some of them supports this)
+//ToDo: Check all effects - thye were originally tested for MIX_EFFECTS 0
 
 static TIM_HandleTypeDef *htimLocal;
 static uint16_t bpm = 164;
@@ -34,9 +36,9 @@ static float multiplier = 1; //defines the speed of an animation
 static uint16_t modifier = 1; //defines the variation of an animation
 static uint8_t brightness = 255; //defines the speed of an animation
 
-static uint8_t colourChanged = 0; //for effects that has to recalculate the influence of colour change (gradients, etc.)
-static uint8_t ownTempo=0;  	  //for effects that use fixed individual refresh rate
-static uint8_t modifier2=0;
+static bool colourChanged = 0; //for effects that has to recalculate the influence of colour change (gradients, etc.)
+static bool ownTempo=0;  	  //for effects that use fixed individual refresh rate
+static bool modifier2=0;
 
 //Pointer to selected function
 static void (*current_effect_func)(void);
@@ -1095,7 +1097,7 @@ static void effect_sectors_backAndForth(void)
     		ARGB_SetWhite(i,primaryColour.w);
     	}
         break;
-	case 0:
+	case 5:
     	for(uint16_t i=126; i<144; i++)
     	{
     		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
@@ -1116,7 +1118,7 @@ static void effect_sectors_backAndForth(void)
     		ARGB_SetWhite(i,secondaryColour.w);
     	}
     break;
-	case 5:
+	case 0:
     	for(uint16_t i=36; i<54; i++)
     	{
     		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
@@ -2225,7 +2227,7 @@ static void effect_middle_bounce2(void) //AI GENERATED!
 // --- SETTERS ---
 void effects_set_timer(uint16_t ARR, uint16_t PSC)
 {
-	__HAL_TIM_DISABLE_IT(htimLocal, TIM_IT_UPDATE); //Should prevent the small visual bug on change of slower effect -> updating TIM creates TIMER IT FLAG, which calls ARGB_Show
+	__HAL_TIM_DISABLE_IT(htimLocal, TIM_IT_UPDATE); //Prevents the small visual bug on change of slower effect -> updating TIM creates TIMER IT FLAG, which calls ARGB_Show -> that results in a bug
 	__HAL_TIM_SET_AUTORELOAD(htimLocal, ARR);
 	__HAL_TIM_SET_PRESCALER(htimLocal, PSC);
 	__HAL_TIM_SET_COUNTER(htimLocal, 0);
@@ -2311,8 +2313,10 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	modifier=1;
 	modifier2=0;
 	//step=0;
-    ARGB_Clear();
-	//ARGB_Show();
+	#if MIX_EFFECTS == 0
+    	ARGB_Clear();
+	#endif
+	//ARGB_Show(); shouldn't be used
 	ARGB_SetBrightness(255);
     switch (effect1)
     {
@@ -2327,12 +2331,14 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             //multiplier = 0.1;
             break;
         case 4 ... 5: //STATIC TWO COLOUR - (CAN USE 0 colour!)
+			ARGB_Clear();
 			current_effect_func = effect_static_two_colour;
         	PSC = 21972;
             //multiplier = 0.1;
             break;
         case 6 ... 7: //STATIC TWO COLOUR w BRIGHTNESS
 			//ToDo: maximal brightness should be related to brightness set by DMX channel!
+			ARGB_Clear();
 			current_effect_func = effect_static_two_colour_brightness;
         	PSC = 21972;
         	modifier=8;
@@ -2525,6 +2531,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             break;
         case 36 ... 37: //MIDDLE
            	current_effect_func = effect_middle;
+            ARGB_Clear(); //ToDo: Add option without ARGB_Clear
             modifier=16;
             //ownTempo=0;
             switch (effect2)
@@ -2536,6 +2543,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             break;
         case 38 ... 39: //MIDDLE BACK AND FORTH
            	current_effect_func = effect_middle_bounce1;
+        	ARGB_Clear(); //ToDo: Add option without ARGB_Clear
             modifier=16;
             //ownTempo=0;
             switch (effect2)

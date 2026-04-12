@@ -33,20 +33,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DEV_ADDR 0x11 //Device number
-#define PLD_SIZE 12 //payload size; 32 = max for nrf; //ToDo: HEADER_SIZE+NUM_OF_CHANNELS
-//#define RX_NUM 6 //number of receivers
-#define HEADER_SIZE 6    //num of bytes for header
-#define NUM_OF_CHANNELS   6   //num of bytes for data
+#define DATA_PACKET_MARK 0xAA
 #define DATA_START_POS 2 //Position of packet on which DMX data starts
-//#define DMXPACKET_SIZE 513 //do not change
-//#define DMX_STARTBYTE 0 //defines what startbyte the receiver listens to; 0 default for light control by standard
 
+#define AWAKE_PACKET_MARK 0xBB
 #define AWAKE_PACKET_LENGTH 2
-#define AWAK_PACKET_PERIOD 20 //20ms by default
 
-#define DATA_PACKET 0xAA
-#define CHECK_PACKET 0xBB
+#define FIFO_SIZE 64
+
+#define BATTERY_LOW_VOLTAGE 15.5f //even 15.0f should be safe
+
+
+
 
 /* USER CODE END PD */
 
@@ -68,10 +66,15 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-static volatile uint32_t step=0;
-static volatile uint8_t nextStepFlag = 1;
-uint8_t lastPacketNumber=0;
-//static uint8_t dmxRX[514];
+//FLAGS
+static volatile bool nextStepFlag = 1; //Next step of animation can be applied
+static volatile bool rxDoneFlag = 0;   //RF packet received
+static volatile bool signalLost = 0;   //RF signal lost
+static uint8_t lastPacketID = 0;   //Last received dataPacket ID
+
+static uint8_t tubeNumber;
+static volatile float current_battery_voltage = 21.0f;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,15 +93,6 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static volatile bool rxDoneFlag=false;
-static uint8_t rx[PLD_SIZE];
-static uint8_t dataPacket[1][6];
-static volatile int8_t signalLost = 0;
-volatile float current_battery_voltage = 24.0f; // Počáteční bezpečná hodnota
-uint8_t tubeNumber;
-
-
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
@@ -147,21 +141,16 @@ float get_battery_voltage()
 {
 	uint32_t adc_value = HAL_ADC_GetValue(&hadc1);
 	//ADC_VALUE*Vref / ADC_RESOLUTION
-	float v_pin = (adc_value * 3.3f) / 4095.0f;
+	//float v_pin = (adc_value * 3.3f) / 4095.0f;
 	//VOLTAGE DIVIDER -> (R7+R8)/R8 = (470k+82k)/82k = 6.7317f
-	float v_battery = v_pin * 6.7317f;
+	float v_battery = ((adc_value * 3.3f) / 4095.0f) * 6.7317f;
 	//HAL_ADC_Start(&hadc1);
 	return v_battery;
 }
 
 /*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-	//memcpy(dmxPrevPacket, dmxPacket, DMXPACKET_SIZE);
-	//memcpy(&dmxPacket[0], &dmxRX[1], DMXPACKET_SIZE);
-
     HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513); //DMXPACKET_SIZE
-    //dmxPacket[3]=255;
-    //HAL_Delay(5000);
 }*/
 /* USER CODE END 0 */
 
@@ -202,13 +191,15 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+
   DIP_init();
   HAL_ADC_Start(&hadc1);
   HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SPI2_GPIO_ShutDN_GPIO_Port, SPI2_GPIO_ShutDN_Pin, GPIO_PIN_RESET);
   HAL_Delay(500);
+
   //---SI4432---
-  SI44_Init(&hspi2, GPIOB, GPIO_PIN_12);
+  SI44_Init(&hspi2, SPI2_GPIO_NSS_GPIO_Port, SPI2_GPIO_NSS_Pin);
   //Delay used to be here
   SI44_PresetConfig();
   HAL_Delay(5000); //ToDo: zkratit
@@ -224,41 +215,23 @@ int main(void)
 
   //---ARGB effects---
   effects_init(&htim2, tubeNumber); //before timer?
-  //ARGB_Init();
-  //ARGB_Clear();
-  //ARGB_Clear();
-  //ARGB_Show();
-
   HAL_TIM_Base_Start_IT(&htim2);
+
+
   HAL_TIM_Base_Start_IT(&htim3);
 
   bool changesMade=1;
   bool afterDataLost=0;
 
+  static uint8_t packetRF[FIFO_SIZE];
+  static uint8_t previousPacketRF[FIFO_SIZE];
 
-  uint8_t testPacket[64];
-  testPacket[0]=255;
-  testPacket[1]=0;
-  testPacket[2]=0;
-  testPacket[3]=0;
-  testPacket[4]=0;
-  testPacket[5]=0;
-  testPacket[6]=0;
-  uint8_t previousPacketRF[64];
-
-  effects_set_effect(2,1); //neošetřenej stav bez efektu?
+  effects_set_effect(0,0); //neošetřenej stav bez efektu?
   effects_set_primaryColour(100);
   effects_set_secondaryColour(150);
   effects_set_tempo(164);
   effects_set_brightness(255);
 
-  //effects_set_effect(87,57);
-
-  //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
-  //HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513);
-  //ARGB_Clear();
-  //ARGB_FillRGB(255, 255, 0);
-  //ARGB_Show();
 
   //SetRXon should be placed as close as possible to the main loop,
   //if not, FIFO buffer can overflow, which resets ipkvalid IRQ to logical 1.
@@ -282,65 +255,53 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //ARGB_FillRGB(255, 255, 0);
-	  //ARGB_Show();
-	  /*ARGB_Clear();
-
-	  HAL_Delay(1000);*/
-	  //Recieving only applies when data changes - included in transmitter code
+	  //RF PACKET RECEIVED
 	  if(rxDoneFlag==1 || HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin) == GPIO_PIN_RESET)
 	  {
+		  //Recieving only applies when data changes - included in transmitter code
 		  rxDoneFlag=0;
 		  reset_timer(&htim3);
-
-		  //signalRF+=1;
 
 		  uint8_t b; //POZOR NA UMÍSTĚNÍ, MŮŽE ZASEKNOUT LED - původní bug
 		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
 		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 
-		  SI44_ReadPacket(testPacket);
-		  //ARGB_SetBrightness(255);
-		  //ARGB_Clear();
-		  //ARGB_FillRGB(testPacket[0], testPacket[1], testPacket[2]);
-		  //ARGB_FillRGB(testPacket[1], testPacket[2], testPacket[3]);
-		  //ARGB_Show();
-
-		  //HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_2);
+		  SI44_ReadPacket(packetRF);
 
 		  //char uartBuf[50];  // dostatečně velký buffer
-		  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[2], testPacket[3]);
+		  //int len = sprintf(uartBuf, "%d %d %d\r\n", packetRF[1], packetRF[2], packetRF[3]);
 		  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 
-		  if(testPacket[0]==DATA_PACKET)
+		  //DATA PACKET
+		  if(packetRF[0]==DATA_PACKET_MARK)
 		  {
-			  lastPacketNumber=testPacket[1];
+			  lastPacketID=packetRF[1];
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
 			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
-			  if(testPacket[4]!=previousPacketRF[4])
+			  if(packetRF[4]!=previousPacketRF[4])
 			  {
-				  effects_set_primaryColour(testPacket[4]);
+				  effects_set_primaryColour(packetRF[4]);
 				  changesMade=true;
 			  }
-			  if(testPacket[5]!=previousPacketRF[5])
+			  if(packetRF[5]!=previousPacketRF[5])
 			  {
-				  effects_set_secondaryColour(testPacket[5]);
+				  effects_set_secondaryColour(packetRF[5]);
 				  changesMade=true;
 			  }
-			  if(testPacket[2]!=previousPacketRF[2])
+			  if(packetRF[2]!=previousPacketRF[2])
 			  {
-				  effects_set_tempo(testPacket[2]);
+				  effects_set_tempo(packetRF[2]);
 				  changesMade=true;
 			  }
-			  if(testPacket[3]!=previousPacketRF[3])
+			  if(packetRF[3]!=previousPacketRF[3])
 			  {
-				  effects_set_brightness(testPacket[3]);
+				  effects_set_brightness(packetRF[3]);
 				  changesMade=true;
 			  }
-			  if(testPacket[6]!=previousPacketRF[6]||testPacket[7]!=previousPacketRF[7]||afterDataLost==true)
+			  if(packetRF[6]!=previousPacketRF[6]||packetRF[7]!=previousPacketRF[7]||afterDataLost==true)
 			  {
-				  effects_set_effect(testPacket[6],testPacket[7]);
+				  effects_set_effect(packetRF[6],packetRF[7]);
 				  changesMade=true;
 				  afterDataLost=0; //Needed to reapply the same values after desynchronization
 			  }
@@ -349,84 +310,69 @@ int main(void)
 			  if(changesMade==true)
 			  {
 				  changesMade=0;
-				  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
+				  memcpy(previousPacketRF, packetRF, sizeof(packetRF));
 				  effects_apply_values();
 			  }
-
-
 		  }
-		  if(testPacket[0]==CHECK_PACKET)
+		  //AWAKE PACKET BEHAVI0R
+		  if(packetRF[0]==AWAKE_PACKET_MARK)
 		  {
-			  if(testPacket[1]!=lastPacketNumber) //DATA PACKET WAS MISSED
+			  //AWAKE PACKET ID MISMATCH
+			  if(packetRF[1]!=lastPacketID)
 			  {
-				  //lastPacketNumber=testPacket[1];
+				  //lastPacketID=packetRF[1];
 				  afterDataLost=1;
+				  //YELLOW
 				  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 				  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 				  effects_set_effect(0,0);
+				  effects_apply_values();
 			  }
-
 		  }
 	  }
+
+	  //SIGNAL LOST BEHAVIOR
 	  if(signalLost==1)
 	  {
 		  signalLost=0;
 		  afterDataLost=1;
 		  effects_set_effect(0,0);
+		  effects_apply_values();
 		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	  }
-	  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
-	  if(get_battery_voltage()<15.5f)
+
+	  //BATTERY LOW BEHAVIOR
+	  if(get_battery_voltage()<BATTERY_LOW_VOLTAGE)
 	  {
+		  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
 			  effects_set_effect(0,0);
+			  effects_apply_values();
 			  HAL_Delay(500);
 			  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
 			  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
 			  HAL_PWR_EnterSTANDBYMode();
 		  }
-	  //char uartBuf[50];  // dostatečně velký buffer
-	  //int len = sprintf(uartBuf, "%d %d %d\r\n", testPacket[1], testPacket[1], testPacket[3]);
-	  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
-	  /*ARGB_SetBrightness(255);
-	  ARGB_FillRGB(255, 0, 0);
-	  ARGB_Show();
-	  HAL_Delay(1000);
-	  ARGB_SetBrightness(255);
-	  	  ARGB_FillRGB(0,255, 0);
-	  	  ARGB_Show();
-	  	HAL_Delay(1000);
-	*/
-	  //ToDo: check gamma
-	 //static ColourName_t currentColour = PRIMARY_BLUE;
-	 //HAL_UART_Receive(&huart1, testPacket, 4, 100);
-	 //HAL_Delay(0);
-	 /*if(dmxRX[5]==0) ------------------------- VLASTNÍ BARVY!
-	 {
-		 ARGB_Clear();
-		 ARGB_SetBrightness(255);
 
-		 ARGB_FillRGB(dmxRX[1], dmxRX[2], dmxRX[3]);
-		 ARGB_FillWhite(dmxRX[4]);
-		 ARGB_Show();
-	 }
-	 else
-	 {
-		 ARGB_SetBrightness(255);
-		 ARGB_FillRGB(
-		 		colourTable[dmxRX[5]].r,
-		 		colourTable[dmxRX[5]].g,
-		 		colourTable[dmxRX[5]].b);
-		 	ARGB_FillWhite(colourTable[dmxRX[5]].w);
-		 	ARGB_Show();
-	 }
-	 HAL_Delay(500);*/
-
-	 if(nextStepFlag==1) //---------------- ODKOMENTOVAT!!!
+	  //EFFECTS TIMING
+	  if(nextStepFlag==1)
 	  {
 		  effects_next_step();
 		  nextStepFlag=0;
-	  } //--------------------------------- ODKOMENTOVAT!!!
-
+	  }
+	  /**
+	   * ToDo: POZOR! Pokud není RF paket ve FIFO odbaven okamžitě -> například vlivem ARGB funkce která je při
+	   * moc rychlém volání ARGB_Show() blokující (MCU čeká ve smyčce while dokud není TIMER znovu ready odesílat) -
+	   * může dojít k přijetí dalšího paketu do FIFO. Všechny pakety které se přijmou jsou však automaticky smazány příštím přečtením
+	   *  -> čte se vždy pouze ten nejstarší paket, ostatní (pokud nějaké jsou, se zahodí). Je však předpoklad, že pakety se zpracují včas.
+	   *  Problematické ale mohou být efekty, které spamují ARGB_Show - neadekvátní tempo časovače (vysoké multipliers) změny chodí moc rychle po sobě
+	   *  nebo ještě hůř ARGB_Show se volá ještě dřív než je vhodno a tím se program zasekává v ARGB knihovně.
+	   *  Bylo by tedy vhodné projít všechny efekty a upravit časování - nebo upravit knihovnu ARGB.
+	   *
+	   * Za normálních okolností to není problém - v případě, že se mezi sebou efekty nemění rychleji než se stíhají vykreslovat.
+	   * To se v praxi nestává ani na DMX (rychlost DMX sběrnice nejrychleji 22,72ms, ARGB až 7ms).
+	   * Při ovládání z telefonu ale mohlo docházet k doubleclicku - to vedlo k vynechání datového paketu, ale přijmu awake paketu
+	   * s odlišným číslem -> vizuálně došlo k přepnutí efektu ale vlivem ztráty paketu (který nebyl odeslán cíleně), také k okamžitému vypnutí
+	   */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -797,11 +743,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_ShutDN_Pin
+  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_GPIO_ShutDN_Pin
                           |SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LED_GREEN_Pin LED_RED_Pin LED_Pin SPI2_ShutDN_Pin */
-  GPIO_InitStruct.Pin = LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_ShutDN_Pin;
+  /*Configure GPIO pins : LED_GREEN_Pin LED_RED_Pin LED_Pin SPI2_GPIO_ShutDN_Pin */
+  GPIO_InitStruct.Pin = LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_GPIO_ShutDN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
