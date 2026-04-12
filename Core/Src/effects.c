@@ -15,7 +15,6 @@
 #include <stdlib.h> // Nutné pro funkci rand()
 
 #define LEDCOUNT 144
-#define TUBENUMBER 1
 #define MCU_CLOCK 72000000.0f
 
 static TIM_HandleTypeDef *htimLocal;
@@ -2226,10 +2225,14 @@ static void effect_middle_bounce2(void) //AI GENERATED!
 // --- SETTERS ---
 void effects_set_timer(uint16_t ARR, uint16_t PSC)
 {
+	__HAL_TIM_DISABLE_IT(htimLocal, TIM_IT_UPDATE); //Should prevent the small visual bug on change of slower effect -> updating TIM creates TIMER IT FLAG, which calls ARGB_Show
 	__HAL_TIM_SET_AUTORELOAD(htimLocal, ARR);
 	__HAL_TIM_SET_PRESCALER(htimLocal, PSC);
 	__HAL_TIM_SET_COUNTER(htimLocal, 0);
-	htimLocal->Instance->EGR = TIM_EGR_UG;
+	htimLocal->Instance->EGR = TIM_EGR_UG; //apply values
+
+	__HAL_TIM_CLEAR_FLAG(htimLocal, TIM_FLAG_UPDATE);
+	__HAL_TIM_ENABLE_IT(htimLocal, TIM_IT_UPDATE);
 }
 
 void effects_set_brightness(uint8_t new_brightness)

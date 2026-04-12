@@ -134,11 +134,11 @@ void reset_timer(TIM_HandleTypeDef *htim)
 	__HAL_TIM_SET_COUNTER(htim, 0);
 }
 
-void DIP_init(TIM_HandleTypeDef *htim)
+void DIP_init()
 {
-	tubeNumber |= (HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP1_Pin)<<0);
-	tubeNumber |= (HAL_GPIO_ReadPin(DIP3_GPIO_Port, DIP3_Pin)<<1);
-	tubeNumber |= (HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP4_Pin)<<2);
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP4_Pin)<<0);
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP3_GPIO_Port, DIP2_Pin)<<1);
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP1_Pin)<<2);
 	tubeNumber+=1;
 }
 
@@ -202,6 +202,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  DIP_init();
   HAL_ADC_Start(&hadc1);
   HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
@@ -313,6 +314,7 @@ int main(void)
 
 		  if(testPacket[0]==DATA_PACKET)
 		  {
+			  lastPacketNumber=testPacket[1];
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
 			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
@@ -347,10 +349,11 @@ int main(void)
 			  if(changesMade==true)
 			  {
 				  changesMade=0;
+				  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
 				  effects_apply_values();
 			  }
-			  lastPacketNumber=testPacket[1];
-			  memcpy(previousPacketRF, testPacket, sizeof(testPacket));
+
+
 		  }
 		  if(testPacket[0]==CHECK_PACKET)
 		  {
@@ -794,11 +797,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_RED_Pin|LED_GREEN_Pin|LED_Pin|SPI2_ShutDN_Pin
+  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_ShutDN_Pin
                           |SPI2_GPIO_NSS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin LED_Pin SPI2_ShutDN_Pin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin|LED_Pin|SPI2_ShutDN_Pin;
+  /*Configure GPIO pins : LED_GREEN_Pin LED_RED_Pin LED_Pin SPI2_ShutDN_Pin */
+  GPIO_InitStruct.Pin = LED_GREEN_Pin|LED_RED_Pin|LED_Pin|SPI2_ShutDN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -817,17 +820,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(SPI2_GPIO_NSS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DIP1_Pin DIP2_Pin DIP3_Pin */
-  GPIO_InitStruct.Pin = DIP1_Pin|DIP2_Pin|DIP3_Pin;
+  /*Configure GPIO pins : DIP4_Pin DIP3_Pin DIP2_Pin */
+  GPIO_InitStruct.Pin = DIP4_Pin|DIP3_Pin|DIP2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DIP4_Pin */
-  GPIO_InitStruct.Pin = DIP4_Pin;
+  /*Configure GPIO pin : DIP1_Pin */
+  GPIO_InitStruct.Pin = DIP1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(DIP4_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(DIP1_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);

@@ -61,10 +61,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define ADC_BATTERY_Pin GPIO_PIN_1
 #define ADC_BATTERY_GPIO_Port GPIOA
-#define LED_RED_Pin GPIO_PIN_0
-#define LED_RED_GPIO_Port GPIOB
-#define LED_GREEN_Pin GPIO_PIN_1
+#define LED_GREEN_Pin GPIO_PIN_0
 #define LED_GREEN_GPIO_Port GPIOB
+#define LED_RED_Pin GPIO_PIN_1
+#define LED_RED_GPIO_Port GPIOB
 #define LED_Pin GPIO_PIN_2
 #define LED_GPIO_Port GPIOB
 #define SPI2_ShutDN_Pin GPIO_PIN_10
@@ -80,14 +80,14 @@ void Error_Handler(void);
 #define UART_DEBUG_TX_GPIO_Port GPIOA
 #define UART_DEBUG_RX_Pin GPIO_PIN_10
 #define UART_DEBUG_RX_GPIO_Port GPIOA
-#define DIP1_Pin GPIO_PIN_11
-#define DIP1_GPIO_Port GPIOA
-#define DIP2_Pin GPIO_PIN_12
-#define DIP2_GPIO_Port GPIOA
-#define DIP3_Pin GPIO_PIN_15
+#define DIP4_Pin GPIO_PIN_11
+#define DIP4_GPIO_Port GPIOA
+#define DIP3_Pin GPIO_PIN_12
 #define DIP3_GPIO_Port GPIOA
-#define DIP4_Pin GPIO_PIN_3
-#define DIP4_GPIO_Port GPIOB
+#define DIP2_Pin GPIO_PIN_15
+#define DIP2_GPIO_Port GPIOA
+#define DIP1_Pin GPIO_PIN_3
+#define DIP1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
