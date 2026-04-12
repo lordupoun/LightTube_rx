@@ -2345,11 +2345,13 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             //multiplier = 0.1;
             break;
         case 8 ... 9: //STATIC TWO COLOUR GRADIENT
+			ARGB_Clear();
 			current_effect_func = effect_static_two_colour_gradient;
         	PSC = 21972;
             //multiplier = 0.1;
             break;
         case 10 ... 11: //STATIC TWO COLOUR GRADIENT REVERSED
+			ARGB_Clear();
 			current_effect_func = effect_static_two_colour_gradient_2;
         	//multiplier = 1;
         	PSC = 21972;
