@@ -27,5 +27,7 @@ void SI44_Read_IT(uint8_t reg, uint8_t * buf, uint8_t length);
 void SI44_ReadPacket_IT(uint8_t * buf);
 void SI44_PacketFetchedFromFIFO_FinishIRQ(void);
 void SI44_PacketSentToFIFO_FinishIRQ(void);
+void SI44_ClearRXFIFO(void);
+void SI44_SetModuleAntenna(void);
 
 #endif

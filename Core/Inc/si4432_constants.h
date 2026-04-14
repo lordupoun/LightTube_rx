@@ -54,5 +54,9 @@ typedef enum {
 
 #define SI44_RECEIVED_PACKET_LENGTH		0x4B
 
+#define SI44_GPIO0_CONFIG				0x0B
+#define SI44_GPIO1_CONFIG				0x0C
+#define SI44_GPIO2_CONFIG				0x0D
+
 
 #endif

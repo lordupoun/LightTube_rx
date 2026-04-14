@@ -24,7 +24,7 @@ void SI44_Read(uint8_t reg, uint8_t * buf, uint8_t length)
 }
 
 
-void SI44_Write(uint8_t reg, uint8_t * buf, uint8_t length)
+void SI44_Write(uint8_t reg, const uint8_t * buf, uint8_t length)
 {
     uint8_t b[length + 1]; //ToDo: allocate non variable; ToDo: memcpy
     b[0] = reg | 0b10000000; //write operation; (MSB=0 mean read)

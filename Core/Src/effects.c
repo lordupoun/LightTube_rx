@@ -10,6 +10,7 @@
  *
  */
 //ToDo: Colour in effects shouldn't be hardcoded into primary and secondary, but switched in a universal variable inside a switch statement
+//ToDo: After some changes, the default step after changing an effect is 0, not 1 as it used to be. It's hard to say where this change became active, and the logic of most effect should be reconsidered if it is okay with this logic.
 #include "effects.h"
 #include "math.h"
 #include <stdlib.h> // Nutné pro funkci rand()
@@ -495,7 +496,11 @@ static void effect_glitchy(void) //made thx to a bug... don't judge the code...
 
 static void effect_strobe(void)
 {
-    if (step==1)
+	if (step > 1)
+	{
+	    step = 0;
+	}
+    if (step==0)
     {
         ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
         ARGB_FillWhite(primaryColour.w);
@@ -505,28 +510,30 @@ static void effect_strobe(void)
     {
         ARGB_Clear();
         ARGB_Show();
-        step = 0;
     }
 }
 
 static void effect_strobe_colours(void)
 {
+	if (step > 3)
+	{
+		step = 0;
+	}
     switch(step)
     {
-		case 1:
+		case 0:
 			ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
 			ARGB_FillWhite(primaryColour.w);
 			break;
-		case 2:
+		case 1:
 			ARGB_Clear();
 			break;
-		case 3:
+		case 2:
 			ARGB_FillRGB(secondaryColour.r, secondaryColour.g, secondaryColour.b);
 			ARGB_FillWhite(secondaryColour.w);
 			break;
 		default:
 			ARGB_Clear();
-			step = 0;
 			break;
     }
 	ARGB_Show();
@@ -534,7 +541,11 @@ static void effect_strobe_colours(void)
 
 static void effect_switch_colours(void)
 {
-    if (step==1)
+	if (step > 1)
+	{
+	    step = 0;
+	}
+    if (step==0)
     {
 		ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
 		ARGB_FillWhite(primaryColour.w);
@@ -545,7 +556,6 @@ static void effect_switch_colours(void)
 		ARGB_FillRGB(secondaryColour.r, secondaryColour.g, secondaryColour.b);
 		ARGB_FillWhite(secondaryColour.w);
 		ARGB_Show();
-        step = 0;
     }
 }
 
@@ -2124,7 +2134,7 @@ static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMidd
 
 }
 
-static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMiddle effect!
+/*static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMiddle effect!
 {
 	static uint8_t direction=0;
 	if(step>63)
@@ -2172,7 +2182,7 @@ static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMidd
     }
     ARGB_Show();
 
-}
+}*/
 /*
 static void effect_middle_bounce2(void) //AI GENERATED!
 {

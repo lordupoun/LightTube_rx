@@ -20,6 +20,12 @@
 void effects_init(TIM_HandleTypeDef *htim, uint8_t tNumber);
 void effects_set_bpm(uint16_t new_bpm);
 void effects_set_effect(uint8_t effect1, uint8_t effect2);
-void effects_next_step();
+void effects_next_step(void);
+void effects_apply_values(void);
+void effects_set_primaryColour(ColourName_t new_colour);
+void effects_set_secondaryColour(ColourName_t new_colour);
+void effects_set_tempo(uint8_t new_bpm);
+void effects_set_brightness(uint8_t new_brightness);
+void effects_set_effect(uint8_t effect1, uint8_t effect2);
 
 #endif /* INC_EFFECTS_H_ */

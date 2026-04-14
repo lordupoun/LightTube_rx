@@ -13,8 +13,6 @@
 
 
 const uint8_t address[]={
-		0x0B,
-		0x0C,
 		0x1C,
 		0x1D,
 		0x1E,
@@ -66,8 +64,6 @@ const uint8_t address[]={
 };
 
 const uint8_t byte[]={
-		0x12,
-		0x15,
 		0x16,
 		0x44,
 		0x0A,

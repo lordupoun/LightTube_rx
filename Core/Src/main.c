@@ -33,17 +33,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DATA_PACKET_MARK 0xAA
-#define DATA_START_POS 2 //Position of packet on which DMX data starts
+#define BROADCAST_PACKET_MARK 0xA1
+#define INDIVIDUAL_PACKET_MARK 0xA2
+//#define DATA_START_POS 2 //Position of packet on which DMX data starts
 
 #define AWAKE_PACKET_MARK 0xBB
 #define AWAKE_PACKET_LENGTH 2
 
 #define FIFO_SIZE 64
 
-#define BATTERY_LOW_VOLTAGE 15.5f //even 15.0f should be safe
+#define BATTERY_LOW_VOLTAGE 15.5f //Voltage at which tube stops; even 15.0f should be safe
 
-
+//ToDo: V režimu více trubic bude asi skákat do chyby FIFO overflow!
 
 
 /* USER CODE END PD */
@@ -70,9 +71,9 @@ UART_HandleTypeDef huart1;
 static volatile bool nextStepFlag = 1; //Next step of animation can be applied
 static volatile bool rxDoneFlag = 0;   //RF packet received
 static volatile bool signalLost = 0;   //RF signal lost
-static uint8_t lastPacketID = 0;   //Last received dataPacket ID
+static uint8_t lastPacketID = 0;   	   //Last received dataPacket ID
 
-static uint8_t tubeNumber;
+static uint8_t tubeNumber; //tubeNumber acquired from DIP switch; from 1 to 6
 static volatile float current_battery_voltage = 21.0f;
 
 /* USER CODE END PV */
@@ -130,9 +131,11 @@ void reset_timer(TIM_HandleTypeDef *htim)
 
 void DIP_init()
 {
-	tubeNumber |= (!HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP4_Pin)<<0);
-	tubeNumber |= (!HAL_GPIO_ReadPin(DIP3_GPIO_Port, DIP2_Pin)<<1);
-	tubeNumber |= (!HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP1_Pin)<<2);
+	tubeNumber = 0;
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP4_GPIO_Port, DIP4_Pin)<<0);
+	//Do not use DIP3! --- needs to be fixed in HW...
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP2_GPIO_Port, DIP2_Pin)<<1);
+	tubeNumber |= (!HAL_GPIO_ReadPin(DIP1_GPIO_Port, DIP1_Pin)<<2);
 	tubeNumber+=1;
 }
 
@@ -202,15 +205,17 @@ int main(void)
   SI44_Init(&hspi2, SPI2_GPIO_NSS_GPIO_Port, SPI2_GPIO_NSS_Pin);
   //Delay used to be here
   SI44_PresetConfig();
-  HAL_Delay(5000); //ToDo: zkratit
+  HAL_Delay(50); //ToDo: zkratit
   SI44_SetAGCMode(0b00100000); //6th bit - sgin
-  HAL_Delay(10);
+  HAL_Delay(5);
   SI44_SetInterrupts1(0b00000010); //1st bit = CRC error
-  HAL_Delay(10);
+  HAL_Delay(5);
   SI44_SetInterrupts2(0b00000000);
-  HAL_Delay(10);
+  HAL_Delay(5);
+  SI44_SetModuleAntenna();
+  //HAL_Delay(5);
   //SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
-  HAL_Delay(500);
+  HAL_Delay(100);
 
 
   //---ARGB effects---
@@ -220,13 +225,13 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim3);
 
-  bool changesMade=1;
-  bool afterDataLost=0;
+  bool changesMade=1;	//Changes made to effect setting -> can reapply values in DATA PACKET handling
+  bool afterDataLost=0; //Data packet was lost - behavior in DATA PACKET handling slightly differs (commented further in code)
 
-  static uint8_t packetRF[FIFO_SIZE];
-  static uint8_t previousPacketRF[FIFO_SIZE];
+  static uint8_t packetRF[FIFO_SIZE];  		  //Current RF packet
+  static uint8_t previousPacketRF[FIFO_SIZE]; //Previous RF packet
 
-  effects_set_effect(0,0); //neošetřenej stav bez efektu?
+  effects_set_effect(0,0);
   effects_set_primaryColour(100);
   effects_set_secondaryColour(150);
   effects_set_tempo(164);
@@ -272,8 +277,9 @@ int main(void)
 		  //int len = sprintf(uartBuf, "%d %d %d\r\n", packetRF[1], packetRF[2], packetRF[3]);
 		  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
 
-		  //DATA PACKET
-		  if(packetRF[0]==DATA_PACKET_MARK)
+		  //DATA PACKET - BROADCAST
+		  //packetType=packetRF[0];
+		  if(packetRF[0]==BROADCAST_PACKET_MARK)
 		  {
 			  lastPacketID=packetRF[1];
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
@@ -310,7 +316,50 @@ int main(void)
 			  if(changesMade==true)
 			  {
 				  changesMade=0;
-				  memcpy(previousPacketRF, packetRF, sizeof(packetRF));
+				  memcpy(previousPacketRF, packetRF, FIFO_SIZE); //ToDo: Doesn't have to copy the whole packet of FIFO_SIZE
+				  effects_apply_values();
+			  }
+		  }
+		  //DATA PACKET - INDIVIDUAL
+		  else if(packetRF[0]==INDIVIDUAL_PACKET_MARK)
+		  {
+			  lastPacketID=packetRF[1];
+			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
+			  uint8_t tubeIndex = (tubeNumber-1)*5;
+			  if(packetRF[4+tubeIndex]!=previousPacketRF[4+tubeIndex])
+			  {
+				  effects_set_primaryColour(packetRF[4+tubeIndex]);
+				  changesMade=true;
+			  }
+			  if(packetRF[5+tubeIndex]!=previousPacketRF[5+tubeIndex])
+			  {
+				  effects_set_secondaryColour(packetRF[5+tubeIndex]);
+				  changesMade=true;
+			  }
+			  if(packetRF[2]!=previousPacketRF[2])
+			  {
+				  effects_set_tempo(packetRF[2]);
+				  changesMade=true;
+			  }
+			  if(packetRF[3+tubeIndex]!=previousPacketRF[3+tubeIndex])
+			  {
+				  effects_set_brightness(packetRF[3+tubeIndex]);
+				  changesMade=true;
+			  }
+			  if(packetRF[6+tubeIndex]!=previousPacketRF[6+tubeIndex]||packetRF[7+tubeIndex]!=previousPacketRF[7+tubeIndex]||afterDataLost==true)
+			  {
+				  effects_set_effect(packetRF[6+tubeIndex],packetRF[7+tubeIndex]);
+				  changesMade=true;
+				  afterDataLost=0; //Needed to reapply the same values after desynchronization
+			  }
+			  //current_effect_func() should apply new values only, if there was a change
+			  //However after loss of data packet, no change is needed - the same signal can be reapplied (afterDataLost=true)
+			  if(changesMade==true)
+			  {
+				  changesMade=0;
+				  memcpy(previousPacketRF, packetRF, FIFO_SIZE);
 				  effects_apply_values();
 			  }
 		  }
@@ -372,6 +421,8 @@ int main(void)
 	   * To se v praxi nestává ani na DMX (rychlost DMX sběrnice nejrychleji 22,72ms, ARGB až 7ms).
 	   * Při ovládání z telefonu ale mohlo docházet k doubleclicku - to vedlo k vynechání datového paketu, ale přijmu awake paketu
 	   * s odlišným číslem -> vizuálně došlo k přepnutí efektu ale vlivem ztráty paketu (který nebyl odeslán cíleně), také k okamžitému vypnutí
+	   *
+	   * Tenhle bug se ještě částečně vyřeší tím, že se přestanou vysílat pakety které se opakují - a to už na vysílači.
 	   */
     /* USER CODE END WHILE */
 

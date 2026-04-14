@@ -46,7 +46,7 @@ void SI44_SetTXPower(SI44_TX_POWER power)
 
 void SI44_SendPacket(uint8_t * buf, uint8_t length)
 {
-    uint8_t b;
+    //uint8_t b;
     SI44_ClearTXFIFO();
     //SI44_Read(0x03, &b, 1); //IRQ for send isnt used, no need to clear IRQ when sending
     //SI44_Read(0x04, &b, 1);
@@ -119,6 +119,16 @@ void SI44_SetInterrupts2(uint8_t it2)
     SI44_Write(SI44_INTERRUPT_ENABLE_2, &it2, 1);
 }
 
+//Sets the GPIO to automatically switch the antenna of the module to RX or TX
+void SI44_SetModuleAntenna(void)
+{
+	uint8_t tx = 0x12; //0x12
+	uint8_t rx = 0x15; //0x15
+    SI44_Write(SI44_GPIO0_CONFIG, &tx, 1); //TX state on GPIO0
+    HAL_Delay(20);
+    SI44_Write(SI44_GPIO1_CONFIG, &rx, 1); //RX state on GPIO1
+}
+
 void SI44_ClearRXFIFO(void)
 {
     uint8_t a = 0b00000010;
@@ -127,7 +137,7 @@ void SI44_ClearRXFIFO(void)
     SI44_Write(SI44_REG_CTRL2, &a, 1);
 }
 
-void SI44_ReadPacket(uint8_t * buf)
+void SI44_ReadPacket(uint8_t * buf) //nemel by vracet delku?
 {
 	uint8_t length=0;
 	SI44_Read(SI44_RECEIVED_PACKET_LENGTH, &length, 1); //ToDo: Pokud length neni vetsi jak 64
