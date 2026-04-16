@@ -38,6 +38,8 @@ static uint16_t modifier = 1; //defines the variation of an animation
 static uint8_t brightness = 255; //defines the speed of an animation
 
 static bool colourChanged = 0; //for effects that has to recalculate the influence of colour change (gradients, etc.)
+static bool effectChanged = 0;
+static bool direction = 0;
 static bool ownTempo=0;  	  //for effects that use fixed individual refresh rate
 static bool modifier2=0;
 
@@ -722,6 +724,28 @@ static void effect_jumping_own(void)
 	static float vy = 0.0f;  //initial speed
 	static const float g = -0.01f; //gravity, +- changes orientation //-0.03f
 
+	if(effectChanged==1)
+	{
+		vy=0;
+		switch(tubeNumber)
+		{
+		case 1:
+		case 6:
+			y=48;
+			break;
+		case 2:
+		case 5:
+			y=98;
+			break;
+		case 3:
+		case 4:
+			y=132;
+			effectChanged=0;
+			break;
+		}
+	}
+
+
 	vy += g;
 	y += vy;
 
@@ -1359,7 +1383,6 @@ static void effect_slide_top(void)
 }
 static void effect_slide_backAndForth_special(void) //ToDo: Double colour - second colour can be zero
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1389,7 +1412,6 @@ static void effect_slide_backAndForth_special(void) //ToDo: Double colour - seco
 
 static void effect_slide_backAndForth(void) //ToDo: Double colour - second colour can be zero
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1520,7 +1542,6 @@ static void effect_fromMiddle_trueZero(void) //DIMS COMPLETELY IN ZERO
 }
 static void effect_fromMiddle_dim(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1559,7 +1580,6 @@ static void effect_fromMiddle_dim(void)
 }
 static void effect_fromMiddle_dim_special(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1600,7 +1620,6 @@ static void effect_fromMiddle_dim_special(void)
 
 static void effect_fromMiddle_dim_special2(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1690,7 +1709,6 @@ static void effect_fromEdge_trueZero(void)
 
 static void effect_fromEdge_dim(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1730,7 +1748,6 @@ static void effect_fromEdge_dim(void)
 
 static void effect_fromEdge_backAndForth_special(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1769,7 +1786,6 @@ static void effect_fromEdge_backAndForth_special(void)
 }
 static void effect_fromEdge_backAndForth(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1811,7 +1827,6 @@ static void effect_fromEdge_backAndForth(void)
 
 static void effect_fromEdge_dim_special(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1852,7 +1867,6 @@ static void effect_fromEdge_dim_special(void)
 
 static void effect_fromEdge_dim_special2(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	if(step>modifier-1)
 	{
@@ -1937,7 +1951,6 @@ static void effect_twoDrops_fromMiddle(void)
 }
 static void effect_twoDrops_backAndForth(void)
 {
-	static uint8_t direction=0;
 	uint16_t limit;
 	ARGB_Clear();
 	if(step>modifier-1)
@@ -1965,9 +1978,15 @@ static void effect_twoDrops_backAndForth(void)
 
 static void effect_drops(void)
 {
-	static uint16_t ticksFromStart=0;
-	//POLE s pozicema
 	static int16_t pole[20];
+	static uint16_t ticksFromStart=0;
+	if(effectChanged==1)
+	{
+		effectChanged=0;
+		ticksFromStart=0;
+		memset(pole, 0, sizeof(pole));
+	}
+	//POLE s pozicema
 	ARGB_Clear();
 	if(ticksFromStart<40&&ticksFromStart%2==0)
 	{
@@ -2086,7 +2105,6 @@ static void effect_middle(void) //ToDo: Fix math - according to fromMiddle effec
 
 static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMiddle effect!
 {
-	static uint8_t direction=0;
 	if(step>modifier-1)
 	{
         step=0;
@@ -2265,7 +2283,7 @@ void effects_set_tempo(uint8_t new_bpm)
 {
     bpm = new_bpm;
     step=0;
-    uint16_t ARR;
+    uint16_t ARR=0;
     if(ownTempo==0)
     {
 		ARR=((60.0f/(float)bpm)/multiplier)*MCU_CLOCK/(PSC+1)-1;
@@ -2322,6 +2340,8 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	multiplier=0.1;
 	modifier=1;
 	modifier2=0;
+	effectChanged=1;
+	direction=0;
 	//step=0;
 	#if MIX_EFFECTS == 0
     	ARGB_Clear();
