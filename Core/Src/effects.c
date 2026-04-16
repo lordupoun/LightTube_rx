@@ -740,9 +740,9 @@ static void effect_jumping_own(void)
 		case 3:
 		case 4:
 			y=132;
-			effectChanged=0;
 			break;
 		}
+		effectChanged=0;
 	}
 
 
