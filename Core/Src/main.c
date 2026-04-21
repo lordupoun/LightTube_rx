@@ -75,6 +75,7 @@ static uint8_t lastPacketID = 0;   	   //Last received dataPacket ID
 
 static uint8_t tubeNumber; //tubeNumber acquired from DIP switch; from 1 to 6
 static volatile float current_battery_voltage = 21.0f;
+static volatile bool applyValues = false;
 
 /* USER CODE END PV */
 
@@ -151,6 +152,14 @@ float get_battery_voltage()
 	return v_battery;
 }
 
+void apply_effect()
+{
+	if(ARGB_Ready() == ARGB_READY) //Prevents writing onto ARGB while another writing is in progress (was causing artifacts)
+	{
+		effects_apply_values();
+		applyValues = false;
+	}
+}
 /*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
     HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513); //DMXPACKET_SIZE
@@ -225,7 +234,7 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim3);
 
-  bool changesMade=1;	//Changes made to effect setting -> can reapply values in DATA PACKET handling
+  bool changesMade=1;	//If changes were made to the ARGB settings - it is true. It is used to redraw current effect immidiately.
   bool afterDataLost=0; //Data packet was lost - behavior in DATA PACKET handling slightly differs (commented further in code)
 
   static uint8_t packetRF[FIFO_SIZE];  		  //Current RF packet
@@ -317,7 +326,7 @@ int main(void)
 			  {
 				  changesMade=0;
 				  memcpy(previousPacketRF, packetRF, FIFO_SIZE); //ToDo: Doesn't have to copy the whole packet of FIFO_SIZE
-				  effects_apply_values();
+				  apply_effect();
 			  }
 		  }
 		  //DATA PACKET - INDIVIDUAL
@@ -360,7 +369,8 @@ int main(void)
 			  {
 				  changesMade=0;
 				  memcpy(previousPacketRF, packetRF, FIFO_SIZE);
-				  effects_apply_values();
+				  applyValues=true;
+				  apply_effect();
 			  }
 		  }
 		  //AWAKE PACKET BEHAVI0R
@@ -375,7 +385,11 @@ int main(void)
 				  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 				  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 				  effects_set_effect(0,0);
-				  effects_apply_values();
+				  //ARGB_Clear();
+				  //ARGB_Show();
+				  //effects_apply_values(); //VOLAT FUNKCI
+				  applyValues=true;
+				  apply_effect();
 			  }
 		  }
 	  }
@@ -385,8 +399,11 @@ int main(void)
 	  {
 		  signalLost=0;
 		  afterDataLost=1;
+		  //ARGB_Clear();
+		  //ARGB_Show();
 		  effects_set_effect(0,0);
-		  effects_apply_values();
+		  applyValues=true;
+		  apply_effect();
 		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	  }
 
@@ -395,17 +412,37 @@ int main(void)
 	  {
 		  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
 			  effects_set_effect(0,0);
+			  while (ARGB_Ready() == ARGB_BUSY) {}
 			  effects_apply_values();
+			  HAL_Delay(500);
+			  ARGB_Clear(); //Only for testing
+			  ARGB_Show();
 			  HAL_Delay(500);
 			  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
 			  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
 			  HAL_PWR_EnterSTANDBYMode();
 		  }
 
-	  //EFFECTS TIMING
+	  //VALUE APPLYING TO ARGB
+	  	  /**
+	  	   * Prevents race condition - effect only redraws when HW enables it, otherwise it could create artifacts
+	  	   * ApplyValues doesn't do anything with the timer. Timer continues adding to steps variable, but the effect only redraws when it is able to.
+	  	   */
+	  if(applyValues == true)
+	  {
+		  apply_effect();
+		  /*if(ARGB_Ready() == ARGB_READY) //Prevents writing onto ARGB while another writing is in progress (was causing artifacts)
+		  {
+			  effects_apply_values();
+		      applyValues = false;
+		  }*/
+	  }
+
+	  //EFFECT TIMING
 	  if(nextStepFlag==1)
 	  {
 		  effects_next_step();
+		  applyValues=true;
 		  nextStepFlag=0;
 	  }
 	  /**

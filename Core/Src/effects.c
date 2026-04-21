@@ -638,6 +638,15 @@ static void effect_moving_dots(void) //AI GENEROVÁNO!
     // Upozornění: Při resetu efektu se nevrátí na začátek, pokračují tam, kde skončily.
     static int32_t dot_positions[10] = {0, 450, 890, 230, 1010, 640, 130, 1200, 750, 330};
 
+	if(effectChanged==1)
+	{
+		effectChanged=0;
+		for(uint8_t i = 0; i < 10; i++)
+		{
+		    dot_positions[i] = 0;
+		}
+	}
+
     // Z modifieru určíme počet aktivních teček (např. 1 až 10)
     uint8_t num_dots = modifier > 0 ? modifier : 1;
     if (num_dots > 10) num_dots = 10;
@@ -2319,7 +2328,7 @@ void effects_set_secondaryColour(ColourName_t new_colour)
 void effects_next_step(void)
 {
     step++;
-    current_effect_func(); //calls
+    //current_effect_func(); //calls
     //if (active_effect_func != 0)
     //{
 
@@ -2352,7 +2361,7 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
     {
         case 0 ... 1: //LIGHTS DOWN //--------------------------------------------------------------
             current_effect_func = effect_lights_down;
-            PSC = 21972;
+            PSC = 5000; //Shorter to prevent visual bugs
             //multiplier = 0.1;
             break;
         case 2 ... 3: //STATIC COLOUR
