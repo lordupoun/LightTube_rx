@@ -712,6 +712,14 @@ static void effect_jumping(void) //AI GENEROVÁNO!
 	static float f;
 	static float phaseInc;
 	static float y;
+
+	if(effectChanged==1)
+	{
+		f=0;
+		phaseInc=0;
+		y=0;
+	}
+
 	f = bpm / 60.0f / beatsPerJump;  //BPM to jump frequency in Hz //ToDo: don't have to repeat each cycle! REMOVE
     phaseInc = 2.0f * M_PI * f / 120.0f; //increment
 
@@ -740,15 +748,15 @@ static void effect_jumping_own(void)
 		{
 		case 1:
 		case 6:
-			y=48;
+			y=70;
 			break;
 		case 2:
 		case 5:
-			y=98;
+			y=110;
 			break;
 		case 3:
 		case 4:
-			y=132;
+			y=138;
 			break;
 		}
 		effectChanged=0;
@@ -2161,6 +2169,22 @@ static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMidd
 
 }
 
+static void effect_order(void) //TUBE ORDER FOR SETUP
+{
+	ARGB_Clear();
+	for(uint8_t i=2; i<6*tubeNumber+2; i=i+6)
+	{
+		//ARGB_SetRGB(i, 0,0,0);
+		ARGB_SetRGB(i+1, 255 ,0,0);
+		//ARGB_SetRGB(i+2, 0,0,0);
+		//ARGB_SetRGB(i+3, 0,0,0);
+		//ARGB_SetRGB(i+4, 0,0,0);
+		//ARGB_SetRGB(i+5, 0,0,0);
+	}
+    ARGB_Show();
+
+}
+
 /*static void effect_middle_bounce2(void) //ToDo: Fix math - according to fromMiddle effect!
 {
 	static uint8_t direction=0;
@@ -3098,6 +3122,11 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 			modifier=8;
 			PSC=549;
 			break; //half note - lower res
+        case 250 ... 251:
+			current_effect_func = effect_order;
+        	PSC = 21972;
+			break;
+
     }
     //is_new_effect = 0;
     step = 0;

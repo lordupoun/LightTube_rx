@@ -44,6 +44,8 @@
 
 #define BATTERY_LOW_VOLTAGE 15.5f //Voltage at which tube stops; even 15.0f should be safe
 
+#define FLASH_TIME 20000//For how long [ms the device is flashable without battery, after plugging in
+
 //ToDo: V režimu více trubic bude asi skákat do chyby FIFO overflow!
 
 
@@ -326,6 +328,7 @@ int main(void)
 			  {
 				  changesMade=0;
 				  memcpy(previousPacketRF, packetRF, FIFO_SIZE); //ToDo: Doesn't have to copy the whole packet of FIFO_SIZE
+				  applyValues=true;
 				  apply_effect();
 			  }
 		  }
@@ -417,7 +420,7 @@ int main(void)
 			  HAL_Delay(500);
 			  ARGB_Clear(); //Only for testing
 			  ARGB_Show();
-			  HAL_Delay(500);
+			  HAL_Delay(FLASH_TIME);
 			  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
 			  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
 			  HAL_PWR_EnterSTANDBYMode();
