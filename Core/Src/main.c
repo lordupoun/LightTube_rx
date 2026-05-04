@@ -44,7 +44,9 @@
 
 #define BATTERY_LOW_VOLTAGE 15.5f //Voltage at which tube stops; even 15.0f should be safe
 
-#define FLASH_TIME 20000//For how long [ms the device is flashable without battery, after plugging in
+#define FLASH_TIME 20000//For how long minimum (ms) the device is flashable without battery, after plugging in
+
+#define BATTERY_LOW_BLINKS 10 //How many times RED LED blinks when battery is low
 
 //ToDo: V režimu více trubic bude asi skákat do chyby FIFO overflow!
 
@@ -414,17 +416,25 @@ int main(void)
 	  if(get_battery_voltage()<BATTERY_LOW_VOLTAGE)
 	  {
 		  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
-			  effects_set_effect(0,0);
-			  while (ARGB_Ready() == ARGB_BUSY) {}
-			  effects_apply_values();
-			  HAL_Delay(500);
-			  ARGB_Clear(); //Only for testing
-			  ARGB_Show();
-			  HAL_Delay(FLASH_TIME);
-			  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
-			  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
-			  HAL_PWR_EnterSTANDBYMode();
+		  effects_set_effect(0,0);
+		  while (ARGB_Ready() == ARGB_BUSY) {}
+		  effects_apply_values();
+		  __disable_irq();
+		  for(uint8_t i=0; i<BATTERY_LOW_BLINKS; i++)
+		  {
+			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
+			  HAL_Delay(200);
+			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
+			  HAL_Delay(200);
 		  }
+		  HAL_Delay(500);
+		  ARGB_Clear(); //Only for testing
+		  ARGB_Show();
+		  HAL_Delay(FLASH_TIME);
+		  //HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);
+		  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+		  HAL_PWR_EnterSTANDBYMode();
+	  }
 
 	  //VALUE APPLYING TO ARGB
 	  	  /**
