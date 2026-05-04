@@ -566,6 +566,10 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
 {
 	static float brightness=0;
 	float brightnessStep=255.0f/(modifier/2.0f-1.0f);
+	if(effectChanged==1)
+	{
+		brightness=0;
+	}
 	if(step>modifier-1)
 	{
         step=0;
@@ -2451,13 +2455,13 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 				  //case 50 ... 62:  multiplier = 8; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
 				  //case 63 ... 72:  multiplier = 16; PSC=137; current_effect_func = effect_strobe_fading_64;  break; // x32
 				  //case 73 ... 108:  multiplier = 32; PSC=68; current_effect_func = effect_strobe_fading_64;  break; // x32
-				case 0 ... 36:    multiplier = 32; modifier = 1024; PSC=69;  break; // x16
-				case 37 ... 72:   multiplier = 16; modifier = 256; PSC=137;  break; // x16
-				case 73 ... 108:  multiplier = 16; modifier = 128; PSC=137;  break; // x16
-				case 109 ... 144: multiplier = 16; modifier = 64; PSC=137;  break; // x16
-				case 145 ... 180: multiplier = 16; modifier = 32; PSC=137;  break; // x16
-				case 181 ... 216: multiplier = 16; modifier = 16; PSC=137;  break; // x16
-				case 217 ... 255: multiplier = 32; modifier = 16; PSC=69;  break; // x16
+				case 0 ... 36:    multiplier = 32; modifier = 1024; PSC=69;  break; // Very slow
+				case 37 ... 72:   multiplier = 16; modifier = 256; PSC=137;  break; // 1 bar (whole note) = four cycles
+				case 73 ... 108:  multiplier = 16; modifier = 128; PSC=137;  break; // 1 bar = two cycles
+				case 109 ... 144: multiplier = 16; modifier = 64; PSC=137;  break; // Whole note
+				case 145 ... 180: multiplier = 16; modifier = 32; PSC=137;  break; // Half note
+				case 181 ... 216: multiplier = 16; modifier = 16; PSC=137;  break; // Eight note
+				case 217 ... 255: multiplier = 32; modifier = 16; PSC=69;  break; // Sixteen
         	}
         	break;
         case 18 ... 19: //STROBE TWO COLOURS
@@ -2613,13 +2617,13 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             //ownTempo=0;
             switch (effect2)
             {
-    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //0,25 changes per beat -> whole note
-    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //0,5 changes per beat -> half note
-    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //1 changes per beat -> quarter
-    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //2 changes per beat -> eight
-    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //4 changes per beat -> sixteen
-    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //8 changes per beat -> 32
-    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //16 changes per beat -> 64
+    			case 0 ... 36:    multiplier = 0.25;  PSC=8789;  break; //32 bar = 1 cycle - change each whole note
+    			case 37 ... 72:   multiplier = 0.5;   PSC=4394;  break; //16 bar = 1 cycle - half note
+    			case 73 ... 108:  multiplier = 1;     PSC=2197;  break; //8 bar = 1 cycle - quarter note
+    			case 109 ... 144: multiplier = 2;     PSC=1098;  break; //4 bar = 1 cycle
+    			case 145 ... 180: multiplier = 4;     PSC=549;   break; //2 bars = 1 cycle
+    			case 181 ... 216: multiplier = 8;     PSC=274;   break; //1 bar = 1 cycle
+    			case 217 ... 255: multiplier = 16;    PSC=137;   break; //half note = 1 cycle
             }
             break;
              /* case 55 ... 56:
