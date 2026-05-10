@@ -419,13 +419,13 @@ int main(void)
 		  effects_set_effect(0,0);
 		  while (ARGB_Ready() == ARGB_BUSY) {}
 		  effects_apply_values();
-		  __disable_irq();
+		  //__disable_irq();
 		  for(uint8_t i=0; i<BATTERY_LOW_BLINKS; i++)
 		  {
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-			  HAL_Delay(200);
+			  HAL_Delay(500);
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
-			  HAL_Delay(200);
+			  HAL_Delay(500);
 		  }
 		  HAL_Delay(500);
 		  ARGB_Clear(); //Only for testing

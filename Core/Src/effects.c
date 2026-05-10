@@ -568,6 +568,7 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
 	float brightnessStep=255.0f/(modifier/2.0f-1.0f);
 	if(effectChanged==1)
 	{
+		effectChanged=0;
 		brightness=0;
 	}
 	if(step>modifier-1)
@@ -719,6 +720,7 @@ static void effect_jumping(void) //AI GENEROVÁNO!
 
 	if(effectChanged==1)
 	{
+		effectChanged=0;
 		f=0;
 		phaseInc=0;
 		y=0;
@@ -1659,7 +1661,7 @@ static void effect_fromMiddle_dim_special2(void)
 		for(int16_t i=LEDCOUNT/2; i>=LEDCOUNT/2-limit; i--) //int - otherwise underflow
 		{
 			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-			ARGB_SetWhite(i,secondaryColour.w);
+			ARGB_SetWhite(i,primaryColour.w);
 		}
 	}
 	else
@@ -2953,15 +2955,15 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
             //ownTempo=0;
             switch (effect2)
             {
-    			case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break; //slow continous
-    			case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break; //whole - lower res
-    			case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break; //half note - lower res
-    			case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break; //quarter note - large blocks
-    			case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break; //quarter note - mid res
-    			case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break; //whole note
-    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break; //half note
-    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break; //quarter note
-    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break; //16
+    			case 0 ... 28:    multiplier = 8;  modifier=128;  PSC=274;   break;
+    			case 29 ... 56:   multiplier = 4;  modifier=16;   PSC=549;   break;
+    			case 57 ... 84:   multiplier = 4;  modifier=8;    PSC=549;   break;
+    			case 85 ... 112:  multiplier = 4;  modifier=4;    PSC=549;   break;
+    			case 113 ... 140: multiplier = 8;  modifier=8;   PSC=274;   break;
+    			case 141 ... 168: multiplier = 16; modifier=64;  PSC=137;   break;
+    			case 169 ... 196:  multiplier = 16; modifier=32;  PSC=137;   break;
+    			case 197 ... 224:  multiplier = 16; modifier=16;  PSC=137;   break;
+    			case 225 ... 255:  multiplier = 32; modifier=16;  PSC=69;   break;
             }
             break;
         case 68 ... 69: //MOVING GRADIENT; multiplier increases speed; modifier increases speed while decreasing smoothness and HW requirements
