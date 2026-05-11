@@ -2178,6 +2178,7 @@ static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMidd
 static void effect_order(void) //TUBE ORDER FOR SETUP
 {
 	ARGB_Clear();
+	ARGB_SetBrightness(255);
 	for(uint8_t i=2; i<6*tubeNumber+2; i=i+6)
 	{
 		//ARGB_SetRGB(i, 0,0,0);

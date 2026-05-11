@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 typedef uint8_t ColourName_t;
-enum {
+/*enum {
     BASTARD_AMBER = 0,
     MEDIUM_AMBER,
     PALE_AMBER_GOLD,
@@ -45,8 +45,9 @@ enum {
     DARK_BLUE,
     WHITE,
     COLOUR_COUNT
-};
+};*/
 
+//Struct with colour channels R,G,B,W
 typedef struct {
     uint8_t r, g, b, w;
 } ColourRGB_t;
