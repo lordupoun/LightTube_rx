@@ -48,7 +48,7 @@
 
 #define BATTERY_LOW_BLINKS 10 //How many times RED LED blinks when battery is low
 
-//ToDo: V režimu více trubic bude asi skákat do chyby FIFO overflow!
+//ToDo: Ošetřit FIFO overflow
 
 
 /* USER CODE END PD */
@@ -415,7 +415,7 @@ int main(void)
 	  //BATTERY LOW BEHAVIOR
 	  if(get_battery_voltage()<BATTERY_LOW_VOLTAGE)
 	  {
-		  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE LOW
+		  //ENABLES STANDBY MODE WHEN BATTERY VOLTAGE IS LOW
 		  effects_set_effect(0,0);
 		  while (ARGB_Ready() == ARGB_BUSY) {}
 		  effects_apply_values();
