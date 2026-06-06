@@ -44,11 +44,11 @@
 
 #define BATTERY_LOW_VOLTAGE 15.5f //Voltage at which tube stops; even 15.0f should be safe
 
-#define FLASH_TIME 20000//For how long minimum (ms) the device is flashable without battery, after plugging in
+#define FLASH_TIME 20000		  //For how long minimum (ms) the device is flashable without battery, after plugging in
 
-#define BATTERY_LOW_BLINKS 10 //How many times RED LED blinks when battery is low
+#define BATTERY_LOW_BLINKS 10 	  //How many times RED LED blinks when battery is low
 
-//ToDo: Ošetřit FIFO overflow
+//ToDo: Fix - prevent FIFO overflow
 
 
 /* USER CODE END PD */
@@ -77,7 +77,7 @@ static volatile bool rxDoneFlag = 0;   //RF packet received
 static volatile bool signalLost = 0;   //RF signal lost
 static uint8_t lastPacketID = 0;   	   //Last received dataPacket ID
 
-static uint8_t tubeNumber; //tubeNumber acquired from DIP switch; from 1 to 6
+static uint8_t tubeNumber; 	 //tubeNumber acquired from DIP switch; from 1 to 6
 static volatile float current_battery_voltage = 21.0f;
 static volatile bool applyValues = false;
 
@@ -164,10 +164,6 @@ void apply_effect()
 		applyValues = false;
 	}
 }
-/*void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
-{
-    HAL_UARTEx_ReceiveToIdle_IT(&huart1, dmxRX, 513); //DMXPACKET_SIZE
-}*/
 /* USER CODE END 0 */
 
 /**
@@ -216,7 +212,6 @@ int main(void)
 
   //---SI4432---
   SI44_Init(&hspi2, SPI2_GPIO_NSS_GPIO_Port, SPI2_GPIO_NSS_Pin);
-  //Delay used to be here
   SI44_PresetConfig();
   HAL_Delay(50); //ToDo: zkratit
   SI44_SetAGCMode(0b00100000); //6th bit - sgin
@@ -226,15 +221,12 @@ int main(void)
   SI44_SetInterrupts2(0b00000000);
   HAL_Delay(5);
   SI44_SetModuleAntenna();
-  //HAL_Delay(5);
   //SI44_SetTXPower(SI44_TX_POWER_20dBm);    //Set TX power to 11dBm (12.5 mW)
   HAL_Delay(100);
-
 
   //---ARGB effects---
   effects_init(&htim2, tubeNumber); //before timer?
   HAL_TIM_Base_Start_IT(&htim2);
-
 
   HAL_TIM_Base_Start_IT(&htim3);
 
@@ -250,18 +242,16 @@ int main(void)
   effects_set_tempo(164);
   effects_set_brightness(255);
 
-
   //SetRXon should be placed as close as possible to the main loop,
   //if not, FIFO buffer can overflow, which resets ipkvalid IRQ to logical 1.
   //That would be caused by Si4432 already running in the background and receiving packets, while program for example waiting in HAL_Delay.
   //(If FIFO overflows, the entire packet cannot be saved into FIFO -> invalid paket received.)
   //That makes the program stuck with no option to start receiving again.
-  //ToDo: Fix this
   //BEWARE - after resetting or quick ON/OFF switching FIFO/receiving seems to stay active -> FIFO will be kept full
-  uint8_t b; //jen pro reset 0x03 registru
-  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
+  uint8_t b;
+  SI44_Read(0x04, &b, 1);
   SI44_Read(0x03, &b, 1);
-  rxDoneFlag = 0; //EXTREMELY IMPORTANT! Fake IRQ signal probably caused by Si4432 booting up!
+  rxDoneFlag = 0; //important - prevents fake IRQ signal probably caused by Si4432 booting up!
   __HAL_GPIO_EXTI_CLEAR_IT(SPI2_IRQ_Pin);
   SI44_ClearRXFIFO();
 
@@ -280,24 +270,18 @@ int main(void)
 		  rxDoneFlag=0;
 		  reset_timer(&htim3);
 
-		  uint8_t b; //POZOR NA UMÍSTĚNÍ, MŮŽE ZASEKNOUT LED - původní bug
-		  SI44_Read(0x04, &b, 1); //Přehodit do Read knihovny?
-		  SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
+		  uint8_t b;
+		  SI44_Read(0x04, &b, 1);
+		  SI44_Read(0x03, &b, 1);
 
 		  SI44_ReadPacket(packetRF);
 
-		  //char uartBuf[50];  // dostatečně velký buffer
-		  //int len = sprintf(uartBuf, "%d %d %d\r\n", packetRF[1], packetRF[2], packetRF[3]);
-		  //HAL_UART_Transmit_IT(&huart1, (uint8_t*)uartBuf, len);
-
 		  //DATA PACKET - BROADCAST
-		  //packetType=packetRF[0];
 		  if(packetRF[0]==BROADCAST_PACKET_MARK)
 		  {
 			  lastPacketID=packetRF[1];
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
-			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
 			  if(packetRF[4]!=previousPacketRF[4])
 			  {
 				  effects_set_primaryColour(packetRF[4]);
@@ -340,7 +324,6 @@ int main(void)
 			  lastPacketID=packetRF[1];
 			  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 			  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
-			  //ToDo: Takovou úpravu aby to zareogavalo co nejrychlejc, pokud se změnil celej paket
 			  uint8_t tubeIndex = (tubeNumber-1)*5;
 			  if(packetRF[4+tubeIndex]!=previousPacketRF[4+tubeIndex])
 			  {
@@ -366,10 +349,8 @@ int main(void)
 			  {
 				  effects_set_effect(packetRF[6+tubeIndex],packetRF[7+tubeIndex]);
 				  changesMade=true;
-				  afterDataLost=0; //Needed to reapply the same values after desynchronization
+				  afterDataLost=0;
 			  }
-			  //current_effect_func() should apply new values only, if there was a change
-			  //However after loss of data packet, no change is needed - the same signal can be reapplied (afterDataLost=true)
 			  if(changesMade==true)
 			  {
 				  changesMade=0;
@@ -390,9 +371,6 @@ int main(void)
 				  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 				  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 				  effects_set_effect(0,0);
-				  //ARGB_Clear();
-				  //ARGB_Show();
-				  //effects_apply_values(); //VOLAT FUNKCI
 				  applyValues=true;
 				  apply_effect();
 			  }
@@ -404,8 +382,6 @@ int main(void)
 	  {
 		  signalLost=0;
 		  afterDataLost=1;
-		  //ARGB_Clear();
-		  //ARGB_Show();
 		  effects_set_effect(0,0);
 		  applyValues=true;
 		  apply_effect();
@@ -444,11 +420,6 @@ int main(void)
 	  if(applyValues == true)
 	  {
 		  apply_effect();
-		  /*if(ARGB_Ready() == ARGB_READY) //Prevents writing onto ARGB while another writing is in progress (was causing artifacts)
-		  {
-			  effects_apply_values();
-		      applyValues = false;
-		  }*/
 	  }
 
 	  //EFFECT TIMING
@@ -458,22 +429,6 @@ int main(void)
 		  applyValues=true;
 		  nextStepFlag=0;
 	  }
-	  /**
-	   * ToDo: POZOR! Pokud není RF paket ve FIFO odbaven okamžitě -> například vlivem ARGB funkce která je při
-	   * moc rychlém volání ARGB_Show() blokující (MCU čeká ve smyčce while dokud není TIMER znovu ready odesílat) -
-	   * může dojít k přijetí dalšího paketu do FIFO. Všechny pakety které se přijmou jsou však automaticky smazány příštím přečtením
-	   *  -> čte se vždy pouze ten nejstarší paket, ostatní (pokud nějaké jsou, se zahodí). Je však předpoklad, že pakety se zpracují včas.
-	   *  Problematické ale mohou být efekty, které spamují ARGB_Show - neadekvátní tempo časovače (vysoké multipliers) změny chodí moc rychle po sobě
-	   *  nebo ještě hůř ARGB_Show se volá ještě dřív než je vhodno a tím se program zasekává v ARGB knihovně.
-	   *  Bylo by tedy vhodné projít všechny efekty a upravit časování - nebo upravit knihovnu ARGB.
-	   *
-	   * Za normálních okolností to není problém - v případě, že se mezi sebou efekty nemění rychleji než se stíhají vykreslovat.
-	   * To se v praxi nestává ani na DMX (rychlost DMX sběrnice nejrychleji 22,72ms, ARGB až 7ms).
-	   * Při ovládání z telefonu ale mohlo docházet k doubleclicku - to vedlo k vynechání datového paketu, ale přijmu awake paketu
-	   * s odlišným číslem -> vizuálně došlo k přepnutí efektu ale vlivem ztráty paketu (který nebyl odeslán cíleně), také k okamžitému vypnutí
-	   *
-	   * Tenhle bug se ještě částečně vyřeší tím, že se přestanou vysílat pakety které se opakují - a to už na vysílači.
-	   */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

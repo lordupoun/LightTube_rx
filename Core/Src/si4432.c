@@ -52,7 +52,7 @@ void SI44_SendPacket(uint8_t * buf, uint8_t length)
     //SI44_Read(0x04, &b, 1);
     SI44_Write(0x3e, &length, 1);
     SI44_Write(SI44_REG_FIFO_ACCESS, buf, length);
-    SI44_ResendPacket(); //Musí být samostatně aby se znovu zapnulo a vypnulo NSS - jinak nepoběží
+    SI44_ResendPacket(); //Musi byt samostatne aby se znovu zapnulo a vypnulo NSS - jinak nepobezi
 }
 
 void SI44_ResendPacket(void)
@@ -148,10 +148,6 @@ void SI44_ReadPacket(uint8_t * buf) //nemel by vracet delku?
 	SI44_ClearRXFIFO();
 
 	SI44_SetRXon(); //ToDo: const static?
-    //přečíst délku
-	//přečíst paket
-	//znovu zapnout RX //ToDo: optimalizovat pro spotřebu baterie
-	//Z registru se cte tak, ze po docteni jednoho prekroci automaticky na dalsi adresu
 }
 
 void SI44_SetRXon(void)
@@ -162,7 +158,7 @@ void SI44_SetRXon(void)
 
 void SI44_ResetIRQ(void)
 {
-	uint8_t b; //jen pro reset 0x03 registru
+	uint8_t b; 				//jen pro reset 0x03 registru
 	SI44_Read(0x03, &b, 1); //jinak by uz neaktivoval IRQ
 	SI44_Read(0x04, &b, 1);
 }

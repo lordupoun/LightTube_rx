@@ -8,7 +8,7 @@
 //Rest of the config can be found in si4432_config.h
 
 #include "si4432_config.h"
-/*-------Config from SI excel register configurator, alligned by pre-made template--------------*/
+/*-------Config from Si excel register configurator, alligned by pre-made template--------------*/
 
 
 

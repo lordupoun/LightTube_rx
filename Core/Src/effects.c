@@ -13,7 +13,7 @@
 //ToDo: After some changes, the default step after changing an effect is 0, not 1 as it used to be. It's hard to say where this change became active, and the logic of most effect should be reconsidered if it is okay with this logic.
 #include "effects.h"
 #include "math.h"
-#include <stdlib.h> // Nutné pro funkci rand()
+#include <stdlib.h> // Nutne pro funkci rand()
 
 #define LEDCOUNT 144
 #define MCU_CLOCK 72000000.0f
@@ -24,8 +24,8 @@ static TIM_HandleTypeDef *htimLocal;
 static uint16_t bpm = 164;
 static uint8_t primaryColourNumber;
 static uint8_t secondaryColourNumber;
-static ColourRGB_t primaryColour = {255, 0, 0, 0}; //20
-static ColourRGB_t secondaryColour = {0, 255, 0, 0}; //102
+static ColourRGB_t primaryColour = {255, 0, 0, 0};   //default testing primarycolour
+static ColourRGB_t secondaryColour = {0, 255, 0, 0}; //default testing secondary
 static uint32_t step = 0;
 static uint8_t tubeNumber;
 //static uint8_t is_new_effect = 0;
@@ -561,7 +561,7 @@ static void effect_switch_colours(void)
     }
 }
 
-//ToDo:opravit a udělat matematicky dobře
+//ToDo:opravit a udelat matematicky dobre
 static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES JASU BY MEL RESPEKTOVAT LOGARITMICKOU KRIVKU VNIMANI
 {
 	static float brightness=0;
@@ -613,34 +613,25 @@ static void effect_strobe_fading(void) //ToDo: VZTAHNOUT JAS K MAX JASU; POKLES 
 
 }*/
 
-static void effect_moving_dots(void) //AI GENEROVÁNO!
+static void effect_moving_dots(void) //AI GENEROVaNO!
 {
-    // Konfigurace vlastností teček
-    // speed: Kladná = vpřed, záporná = vzad. Hodnota 10 znamená posun o 1 LED za krok.
-    //        (5 znamená půl LED za krok atd. - umožňuje to plynulejší různé rychlosti)
-    // tail_length: Určuje vizuální velikost/intenzitu tečky.
     typedef struct {
         int8_t speed;
         uint8_t tail_length;
     } DotDef_t;
 
-    // Fixní definice pro 10 nezávislých teček (můžeš si s parametry pohrát)
     static const DotDef_t dots[10] = {
-        { 10, 15},  // Normální rychlost vpřed, střední intenzita
-        {-15, 20},  // Rychlejší vzad, vysoká intenzita (dlouhý ocas)
-        {  5,  8},  // Pomalá vpřed, malá intenzita
-        {-10, 12},  // Normální vzad
-        { 20, 18},  // Velmi rychlá vpřed, silná
-        { -5, 10},  // Pomalá vzad
-        { 12, 14},  // Středně rychlá vpřed
-        {-18, 16},  // Rychlá vzad
-        {  8,  9},  // ...
+        { 10, 15},
+        {-15, 20},
+        {  5,  8},
+        {-10, 12},
+        { 20, 18},
+        { -5, 10},
+        { 12, 14},
+        {-18, 16},
+        {  8,  9},
         {-12, 11}
     };
-
-    // Statické pole pro uchování reálných pozic (násobeno 10 pro desetinnou přesnost).
-    // Začínají rozmístěné pseudo-náhodně po pásku (0, 45.0, 89.0 atd.).
-    // Upozornění: Při resetu efektu se nevrátí na začátek, pokračují tam, kde skončily.
     static int32_t dot_positions[10] = {0, 450, 890, 230, 1010, 640, 130, 1200, 750, 330};
 
 	if(effectChanged==1)
@@ -652,51 +643,39 @@ static void effect_moving_dots(void) //AI GENEROVÁNO!
 		}
 	}
 
-    // Z modifieru určíme počet aktivních teček (např. 1 až 10)
     uint8_t num_dots = modifier > 0 ? modifier : 1;
     if (num_dots > 10) num_dots = 10;
 
-    // 1. Vyplnění podkladovou barvou
     ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
     ARGB_FillWhite(primaryColour.w);
 
-    // Výpočet celkového rozdílu barev pro lineární interpolaci gradientu (ocasů)
     int16_t r_diff = (int16_t)primaryColour.r - (int16_t)secondaryColour.r;
     int16_t g_diff = (int16_t)primaryColour.g - (int16_t)secondaryColour.g;
     int16_t b_diff = (int16_t)primaryColour.b - (int16_t)secondaryColour.b;
     int16_t w_diff = (int16_t)primaryColour.w - (int16_t)secondaryColour.w;
 
-    // 2. Vykreslení teček
     for (uint8_t i = 0; i < num_dots; i++)
     {
-        // Posun tečky
         dot_positions[i] += dots[i].speed;
 
-        // Ošetření přetečení pásku (udržení v mezích 0 až LEDCOUNT * 10)
         if (dot_positions[i] >= LEDCOUNT * 10) {
             dot_positions[i] -= LEDCOUNT * 10;
         } else if (dot_positions[i] < 0) {
             dot_positions[i] += LEDCOUNT * 10;
         }
 
-        // Získání reálné hlavy tečky
         int16_t head_pos = dot_positions[i] / 10;
 
-        // Směr ocasu (ocas kreslíme do protisměru)
         int8_t tail_dir = (dots[i].speed > 0) ? -1 : 1;
         uint8_t current_tail = dots[i].tail_length;
 
-        // Vykreslení samotného ocasu a hlavy
         for (uint8_t j = 0; j <= current_tail; j++)
         {
-            // Pozice pixelu ocasu na pásku
             int16_t draw_pos = head_pos + (j * tail_dir);
 
-            // Zalamování ocasu přes konce pásku
             if (draw_pos >= LEDCOUNT) draw_pos -= LEDCOUNT;
             else if (draw_pos < 0) draw_pos += LEDCOUNT;
 
-            // Výpočet barvy rychlou celočíselnou interpolací (0 = plná hlava, current_tail = plný podklad)
             uint8_t r = secondaryColour.r + (r_diff * j) / current_tail;
             uint8_t g = secondaryColour.g + (g_diff * j) / current_tail;
             uint8_t b = secondaryColour.b + (b_diff * j) / current_tail;
@@ -709,7 +688,7 @@ static void effect_moving_dots(void) //AI GENEROVÁNO!
     ARGB_Show();
 }
 
-static void effect_jumping(void) //AI GENEROVÁNO!
+static void effect_jumping(void) //AI GENEROVaNO!
 {
 	static const float H = 143.0f;
 	static const float beatsPerJump = 2.0f;
@@ -2386,7 +2365,6 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 	#if MIX_EFFECTS == 0
     	ARGB_Clear();
 	#endif
-	//ARGB_Show(); shouldn't be used
 	ARGB_SetBrightness(255);
     switch (effect1)
     {
@@ -3135,16 +3113,12 @@ void effects_set_effect(uint8_t effect1, uint8_t effect2)
 			break;
 
     }
-    //is_new_effect = 0;
     step = 0;
     if(ownTempo==0)
     {
 		ARR=((60.0f/(float)bpm)/multiplier)*MCU_CLOCK/(PSC+1)-1;
     }
-    //uint16_t arr = (raw_arr > 65535.0f) ? 65535 : (uint16_t)raw_arr;
-
 
 	effects_set_timer(ARR, PSC);
 
-	//current_effect_func();
 }
