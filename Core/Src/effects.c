@@ -2021,8 +2021,9 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 	ARGB_Clear();
 	switch(tubeNumber)
 	{
-	case 3 ... 4:
-			if(step==0||step==1)
+	case 3:
+	case 4:
+			if(step==0)
 			{
 			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
 			    ARGB_FillWhite(primaryColour.w);
@@ -2030,7 +2031,7 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 		break;
 	case 2:
 	case 5:
-			if(step==2)
+			if(step==1)
 			{
 			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
 			    ARGB_FillWhite(primaryColour.w);
@@ -2038,7 +2039,7 @@ static void effect_tubes(void) //ToDo: Rozdelit 6 trubic na cas ktery budou svit
 		break;
 	case 1:
 	case 6:
-			if(step==3)
+			if(step==2)
 			{
 			    ARGB_FillRGB(primaryColour.r, primaryColour.g, primaryColour.b);
 			    ARGB_FillWhite(primaryColour.w);
