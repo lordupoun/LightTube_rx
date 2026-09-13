@@ -15,10 +15,12 @@
 #include "math.h"
 #include <stdlib.h> // Nutne pro funkci rand()
 
-#define LEDCOUNT 144
+#define LEDCOUNT 140
 #define MCU_CLOCK 72000000.0f
 #define MIX_EFFECTS 1 //If == 1; various effect can mix with each other when transitioning (only some of them supports this)
 //ToDo: Check all effects - thye were originally tested for MIX_EFFECTS 0
+
+#define SECTOR_COUNT 8 //number of steps for some sector effects - default and original value was 8 -> 06/2026
 
 static TIM_HandleTypeDef *htimLocal;
 static uint16_t bpm = 164;
@@ -101,9 +103,10 @@ static void effect_static_two_colour(void)
 	ARGB_Show();
 }
 
+//May not work as intended in original 06/2026
 static void effect_static_two_colour_brightness(void)
 {   //modifier must be selected so LEDCOUNT is divided to an integer
-	uint8_t blocks = LEDCOUNT/modifier;
+	float blocks = LEDCOUNT/(float)modifier;
 	uint8_t brightnessStep = 256/modifier;
 	for(uint8_t a=0; a<blocks; a++) //BLOCK
 	{
@@ -688,9 +691,10 @@ static void effect_moving_dots(void) //AI GENEROVaNO!
     ARGB_Show();
 }
 
-static void effect_jumping(void) //AI GENEROVaNO!
+//Old prototype AI generated effect; should be removed in future releases...
+static void effect_jumping(void)
 {
-	static const float H = 143.0f;
+	static const float H = (float)(LEDCOUNT-1);
 	static const float beatsPerJump = 2.0f;
 	static float phase = 0.0f; //immediate phase of sinus curve
 	static float f;
@@ -720,9 +724,10 @@ static void effect_jumping(void) //AI GENEROVaNO!
 	ARGB_Show();
 }
 
+//Changed slightly from the original release 06/2026
 static void effect_jumping_own(void)
 {
-	static float y = 100.0f; //initial pos; max jump height
+	static float y = (float)LEDCOUNT/1.44f; //initial pos; max jump height
 	static float vy = 0.0f;  //initial speed
 	static const float g = -0.01f; //gravity, +- changes orientation //-0.03f
 
@@ -733,15 +738,15 @@ static void effect_jumping_own(void)
 		{
 		case 1:
 		case 6:
-			y=70;
+			y=LEDCOUNT/2;
 			break;
 		case 2:
 		case 5:
-			y=110;
+			y=LEDCOUNT/1.31f;
 			break;
 		case 3:
 		case 4:
-			y=138;
+			y=LEDCOUNT/1.044f;
 			break;
 		}
 		effectChanged=0;
@@ -751,9 +756,9 @@ static void effect_jumping_own(void)
 	vy += g;
 	y += vy;
 
-	if (y > 143.0f) //if top reached
+	if (y > (float)(LEDCOUNT-1)) //if top reached
 			{
-		y = 143.0f - (y - 143.0f); //fixes attenuation
+		y = (float)(LEDCOUNT-1) - (y - (float)(LEDCOUNT-1)); //fixes attenuation
 		vy *= -1.0f; //changes direction of speed
 	}
 	if (y < 0.0f) //if bottom reached
@@ -768,9 +773,10 @@ static void effect_jumping_own(void)
 	ARGB_Show();
 }
 
+//Changed slightly from the original release 06/2026 (slightly smaller colourMaxStep number)
 static void effect_falling_drop(void)
 {
-	static uint8_t colourMaxStep=132; //defines a step, where colour stops changing; maximum is maxAnimationSteps-1
+	static uint8_t colourMaxStep=LEDCOUNT/1.1f; //defines a step, where colour stops changing; maximum is maxAnimationSteps-1
 	static float colourChangeVector[4];
 	static float currentColourChanged[4];
 	if(step>=LEDCOUNT)
@@ -837,220 +843,128 @@ static void effect_odd_even(void)
     ARGB_Show();
 }
 
-static void effect_sectors_fadein(void)//ToDo: optimize!
+//Effect modified to comply with the original timing table
+static void effect_sectors_fadein(void)
 {
-	if(step<8)
+	if(step<SECTOR_COUNT)
 	{
-		switch(step)
-		{
-		case 0:
-			for(uint16_t i=0; i<18; i++)
-			{
-				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-				ARGB_SetWhite(i,primaryColour.w);
-			}
-			ARGB_Show();
-			break;
-		case 1:
-			for(uint16_t i=126; i<144; i++)
-			{
-				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-				ARGB_SetWhite(i,primaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 2:
-			for(uint16_t i=18; i<36; i++)
-			{
-	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-	    		ARGB_SetWhite(i,secondaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 3:
-			for(uint16_t i=108; i<126; i++)
-			{
-	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-	    		ARGB_SetWhite(i,secondaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 4:
-			for(uint16_t i=36; i<54; i++)
-			{
-				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-				ARGB_SetWhite(i,primaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 5:
-			for(uint16_t i=90; i<108; i++)
-			{
-				ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-				ARGB_SetWhite(i,primaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 6:
-			for(uint16_t i=54; i<72; i++)
-			{
-	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-	    		ARGB_SetWhite(i,secondaryColour.w);
-			}
-			ARGB_Show();
-		break;
-		case 7:
-			for(uint16_t i=72; i<90; i++)
-			{
-	    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-	    		ARGB_SetWhite(i,secondaryColour.w);
-				//ARGB_Clear();
-			}
-			ARGB_Show();
-		break;
-		}
-	}
+		uint8_t localStep = step/2;
+		uint16_t start = (localStep * LEDCOUNT) / SECTOR_COUNT;
+		uint16_t end   = ((localStep + 1) * LEDCOUNT) / SECTOR_COUNT;
+		ColourRGB_t colour = primaryColour;
 
+		if((step/2)%2==0)
+		{
+			colour = secondaryColour;
+		}
+		if(step%2==0)
+		{
+			for(uint16_t i=start; i<end; i++)
+			{
+				ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+				ARGB_SetWhite(i,colour.w);
+			}
+		}
+		else
+		{
+			for(uint16_t i=LEDCOUNT-end; i<LEDCOUNT-start; i++)
+			{
+				ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+				ARGB_SetWhite(i,colour.w);
+			}
+		}
+		ARGB_Show();
+	}
 }
 
+static void effect_sectors_fadein_AtOnce(void)
+{
+	if(step<SECTOR_COUNT)
+	{
+		uint16_t start = (step * LEDCOUNT) / SECTOR_COUNT;
+		uint16_t end   = ((step + 1) * LEDCOUNT) / SECTOR_COUNT;
+
+		for(uint16_t i=start; i<end; i++)
+		{
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
+		}
+		for(uint16_t i=LEDCOUNT-end; i<LEDCOUNT-start; i++)
+		{
+			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+			ARGB_SetWhite(i,primaryColour.w);
+
+		}
+		ARGB_Show();
+	}
+}
+
+//Changed - slightly differs from the original version 06/2026 (i think)
 static void effect_sectors_blinking(void)
 {
+	static const uint8_t stepToSector[8] = {7, 1, 5, 3, 4, 2, 6, 0};
 	if(step>16)
 	{
         step=0;
 	}
-	switch(step)
+	if(step<8)
 	{
-	case 3:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-        break;
-	case 0:
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 1:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 7:
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 5:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 2:
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 6:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 4:
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 8 ... 14:
-    break;
-	case 15:
-		ARGB_Clear();
-	break;
+		uint8_t sector = stepToSector[step];
+
+		uint16_t start = (sector * LEDCOUNT) / 8;
+		uint16_t end   = ((sector + 1) * LEDCOUNT) / 8;
+
+		ColourRGB_t colour = primaryColour;
+
+		if(sector>3)
+		{
+			colour = secondaryColour;
+		}
+
+		for (uint16_t i = start; i < end; i++)
+		{
+			ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+			ARGB_SetWhite(i,colour.w);
+		}
 	}
-    ARGB_Show();
+	else if (step == 15)
+	{
+	    ARGB_Clear();
+	}
+	ARGB_Show();
 }
 
 static void effect_sectors(void)
 {
 	ARGB_Clear();
-	if(step>7)
+	if(step>SECTOR_COUNT-1)
 	{
         step=0;
 	}
-	switch(step)
+	uint8_t localStep = step/2;
+	uint16_t start = (localStep * LEDCOUNT) / SECTOR_COUNT; //8 is variable sector count;
+	uint16_t end   = ((localStep + 1) * LEDCOUNT) / SECTOR_COUNT;
+	ColourRGB_t colour = primaryColour;
+
+	if((step/2)%2==0)
 	{
-	case 0:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-        break;
-	case 1:
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 2:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 3:
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 4:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 5:
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 6:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 7:
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
+		colour = secondaryColour;
+	}
+	if(step%2==0)
+	{
+		for(uint16_t i=start; i<end; i++)
+		{
+			ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+			ARGB_SetWhite(i,colour.w);
+		}
+	}
+	else
+	{
+		for(uint16_t i=LEDCOUNT-end; i<LEDCOUNT-start; i++)
+		{
+			ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+			ARGB_SetWhite(i,colour.w);
+		}
 	}
     ARGB_Show();
 }
@@ -1062,253 +976,99 @@ static void effect_sectors_together(void)
 	{
         step=0;
 	}
-	switch(step)
+	uint16_t start = (step * LEDCOUNT) / 8;
+	uint16_t end   = ((step + 1) * LEDCOUNT) / 8;
+
+	for(uint16_t i=start; i<end; i++)
 	{
-	case 0:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-        break;
-	case 1:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 2:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 3:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
+		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
+		ARGB_SetWhite(i,primaryColour.w);
+	}
+	for(uint16_t i=LEDCOUNT-end; i<LEDCOUNT-start; i++)
+	{
+		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+		ARGB_SetWhite(i,secondaryColour.w);
 	}
     ARGB_Show();
 }
 
+//Differs from the original version of 06/2026
 static void effect_sectors_backAndForth(void)
 {
-
 	if(step>15)
 	{
         step=0;
         //ARGB_Clear();
 	}
-	switch(step)
+	static const uint8_t stepToSector[8] = {7, 1, 5, 3, 4, 2, 6, 0};
+	if(step>16)
 	{
-	case 3:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-        break;
-	case 5:
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 1:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 7:
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 0:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 2:
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 6:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 4:
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 9:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-        break;
-	case 15:
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 8:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 11:
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 13:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 10:
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 12:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
-	case 14:
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
-    	}
-    break;
+        step=0;
+	}
+	if(step<8)
+	{
+		uint8_t sector = stepToSector[step];
+
+		uint16_t start = (sector * LEDCOUNT) / 8;
+		uint16_t end   = ((sector + 1) * LEDCOUNT) / 8;
+
+		ColourRGB_t colour = primaryColour;
+
+		if(sector>3)
+		{
+			colour = secondaryColour;
+		}
+
+		for (uint16_t i = start; i < end; i++)
+		{
+			ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+			ARGB_SetWhite(i,colour.w);
+		}
+	}
+	else
+	{
+		uint8_t sector = stepToSector[step-8];
+
+		uint16_t start = (sector * LEDCOUNT) / 8;
+		uint16_t end   = ((sector + 1) * LEDCOUNT) / 8;
+
+		for (uint16_t i = start; i < end; i++)
+		{
+			ARGB_SetRGB(i,0,0,0);
+			ARGB_SetWhite(i,0);
+		}
 	}
     ARGB_Show();
 }
 
 static void effect_sectors_random(void)
 {
-	ARGB_Clear();
+	static const uint8_t stepToSector[8] = {7, 1, 5, 3, 4, 2, 6, 0};
 	if(step>7)
 	{
         step=0;
 	}
-	switch(step)
+
+	ARGB_Clear();
+
+	uint8_t sector = stepToSector[step];
+
+	uint16_t start = (sector * LEDCOUNT) / 8;
+	uint16_t end   = ((sector + 1) * LEDCOUNT) / 8;
+
+	ColourRGB_t colour = primaryColour;
+
+	if(sector>3)
 	{
-	case 3:
-    	for(uint16_t i=0; i<18; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-        break;
-	case 0:
-    	for(uint16_t i=126; i<144; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 1:
-    	for(uint16_t i=18; i<36; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 7:
-    	for(uint16_t i=108; i<126; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
-	case 5:
-    	for(uint16_t i=36; i<54; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 2:
-    	for(uint16_t i=90; i<108; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 6:
-    	for(uint16_t i=54; i<72; i++)
-    	{
-    		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-    		ARGB_SetWhite(i,primaryColour.w);
-    	}
-    break;
-	case 4:
-    	for(uint16_t i=72; i<90; i++)
-    	{
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-    	}
-    break;
+		colour = secondaryColour;
 	}
-    ARGB_Show();
+
+	for (uint16_t i = start; i < end; i++)
+	{
+		ARGB_SetRGB(i,colour.r, colour.g, colour.b);
+		ARGB_SetWhite(i,colour.w);
+	}
+	ARGB_Show();
 }
 
 void effect_random_static(void)
@@ -1675,7 +1435,7 @@ static void effect_fromEdge(void)
     	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
     	ARGB_SetWhite(i,primaryColour.w);
     }
-    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
     {
     	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
     	ARGB_SetWhite(i,secondaryColour.w);
@@ -1700,7 +1460,7 @@ static void effect_fromEdge_trueZero(void)
 			ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 			ARGB_SetWhite(i,primaryColour.w);
 		}
-		for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+		for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 		{
 			ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 			ARGB_SetWhite(i,secondaryColour.w);
@@ -1726,7 +1486,7 @@ static void effect_fromEdge_dim(void)
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
@@ -1739,7 +1499,7 @@ static void effect_fromEdge_dim(void)
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
@@ -1845,7 +1605,7 @@ static void effect_fromEdge_dim_special(void)
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
@@ -1858,7 +1618,7 @@ static void effect_fromEdge_dim_special(void)
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
@@ -1884,7 +1644,7 @@ static void effect_fromEdge_dim_special2(void)
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
 	    	ARGB_SetWhite(i,primaryColour.w);
@@ -1897,7 +1657,7 @@ static void effect_fromEdge_dim_special2(void)
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
 	    }
-	    for(int16_t i=143; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
+	    for(int16_t i=LEDCOUNT-1; i>=LEDCOUNT-limit; i--) //int - otherwise underflow
 	    {
 	    	ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
 	    	ARGB_SetWhite(i,secondaryColour.w);
@@ -1924,14 +1684,15 @@ static void effect_twoDrops_fromEdge(void)
 static void effect_twoDrops_buggy(void)
 {
 	uint16_t limit;
+	uint16_t ledCountHalf=LEDCOUNT/2;
 	ARGB_Clear();
 	if(step>modifier-1)
 	{
         step=0;
 	}
-	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
-    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
-    ARGB_SetWhite(72-limit,primaryColour.w);
+	limit=(uint16_t)((((float)ledCountHalf)/((float)modifier-1))*step);
+    ARGB_SetRGB(ledCountHalf-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_SetWhite(ledCountHalf-limit,primaryColour.w);
     ARGB_SetRGB(LEDCOUNT-1-limit,secondaryColour.r, secondaryColour.g, secondaryColour.b);
     ARGB_SetWhite(LEDCOUNT-1-limit,secondaryColour.w);
 	ARGB_Show();
@@ -1939,34 +1700,36 @@ static void effect_twoDrops_buggy(void)
 static void effect_twoDrops_fromMiddle(void)
 {
 	uint16_t limit;
+	uint16_t ledCountHalf=LEDCOUNT/2;
 	ARGB_Clear();
 	if(step>modifier-1)
 	{
         step=0;
 	}
-	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
-    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
-    ARGB_SetWhite(72-limit,primaryColour.w);
-    ARGB_SetRGB(72+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    ARGB_SetWhite(72+limit-1,secondaryColour.w);
+	limit=(uint16_t)((((float)ledCountHalf)/((float)modifier-1))*step);
+    ARGB_SetRGB(ledCountHalf-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+    ARGB_SetWhite(ledCountHalf-limit,primaryColour.w);
+    ARGB_SetRGB(ledCountHalf+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+    ARGB_SetWhite(ledCountHalf+limit-1,secondaryColour.w);
 	ARGB_Show();
 }
 static void effect_twoDrops_backAndForth(void)
 {
 	uint16_t limit;
+	uint16_t ledCountHalf=LEDCOUNT/2;
 	ARGB_Clear();
 	if(step>modifier-1)
 	{
         step=0;
         direction=!direction;
 	}
-	limit=(uint16_t)((((float)LEDCOUNT/2)/((float)modifier-1))*step);
+	limit=(uint16_t)((((float)ledCountHalf)/((float)modifier-1))*step);
 	if(direction==0)
 	{
-	    ARGB_SetRGB(72-limit,primaryColour.r, primaryColour.g, primaryColour.b);
-	    ARGB_SetWhite(72-limit,primaryColour.w);
-	    ARGB_SetRGB(72+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-	    ARGB_SetWhite(72+limit-1,secondaryColour.w);
+	    ARGB_SetRGB(ledCountHalf-limit,primaryColour.r, primaryColour.g, primaryColour.b);
+	    ARGB_SetWhite(ledCountHalf-limit,primaryColour.w);
+	    ARGB_SetRGB(ledCountHalf+limit-1,secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	    ARGB_SetWhite(ledCountHalf+limit-1,secondaryColour.w);
 	}
 	else
 	{
@@ -1978,9 +1741,10 @@ static void effect_twoDrops_backAndForth(void)
 	ARGB_Show();
 }
 
+//Changed visual - not the same as original from 06/2026
 static void effect_drops(void)
 {
-	static int16_t pole[20];
+	static int16_t pole[LEDCOUNT/8];
 	static uint16_t ticksFromStart=0;
 	if(effectChanged==1)
 	{
@@ -1990,11 +1754,11 @@ static void effect_drops(void)
 	}
 	//POLE s pozicema
 	ARGB_Clear();
-	if(ticksFromStart<40&&ticksFromStart%2==0)
+	if(ticksFromStart<LEDCOUNT/4&&ticksFromStart%2==0)
 	{
 		pole[ticksFromStart/2]=1;
 	}
-	for(uint8_t i=0; i<20; i++)
+	for(uint8_t i=0; i<LEDCOUNT/8; i++)
 	{
 		if(pole[i]!=0)
 		{
@@ -2008,7 +1772,7 @@ static void effect_drops(void)
 		}
 	}
 	ARGB_Show();
-	if(ticksFromStart<41) //prevents overflow
+	if(ticksFromStart<LEDCOUNT/4+1) //prevents overflow
 	ticksFromStart++;
 }
 
@@ -2077,82 +1841,98 @@ static void effect_tubes_true_pingpong(void) //AI GENERATED - only for test
     ARGB_Show();
 }
 
-
-static void effect_middle(void) //ToDo: Fix math - according to fromMiddle effect! use the "limit" variable!
+//Changed from original 06/2026; now generated by AI
+static void effect_middle(void)
 {
-	if(step>modifier-1)
-	{
-        step=0;
-        ARGB_Clear();
-	}
-	for(uint8_t i=64; i<80; i++) //FILL
-	{
-		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-		ARGB_SetWhite(i,primaryColour.w);
-	}
-        for(uint16_t i=63; i>63-step*(64/modifier); i--) //DIRECTION
-        {
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-        }
-        for(uint16_t i=80; i<80+step*(64/modifier); i++) //DIRECTION
-        {
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-        }
+	if (step >= modifier)
+	    {
+	        step = 0;
+	        ARGB_Clear();
+	    }
+	    uint16_t mid_width = LEDCOUNT / 9;
+	    if (mid_width == 0) mid_width = 1;
 
-    ARGB_Show();
+	    uint16_t mid_start = (LEDCOUNT - mid_width) / 2;
+	    uint16_t mid_end   = mid_start + mid_width;
 
+	    uint16_t wing_size = mid_start;
+
+	    uint16_t limit = ((uint32_t)step * wing_size) / modifier;
+
+	    for (uint16_t i = mid_start; i < mid_end; i++)
+	    {
+	        ARGB_SetRGB(i, primaryColour.r, primaryColour.g, primaryColour.b);
+	        ARGB_SetWhite(i, primaryColour.w);
+	    }
+
+	    for (uint16_t i = mid_start - limit; i < mid_start; i++)
+	    {
+	        ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	        ARGB_SetWhite(i, secondaryColour.w);
+	    }
+
+	    for (uint16_t i = mid_end; i < mid_end + limit; i++)
+	    {
+	        ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+	        ARGB_SetWhite(i, secondaryColour.w);
+	    }
+
+	    ARGB_Show();
 }
 
-
-static void effect_middle_bounce1(void) //ToDo: Fix math - according to fromMiddle effect!
+//Changed from original 06/2026; now generated by AI
+//(maybe try the different version?)
+static void effect_middle_bounce1(void)
 {
-	if(step>modifier-1)
-	{
-        step=0;
-        if(direction==0) //use negation instead
-        {
-        	direction=1;
-        }
-        else
-        {
-        	direction=0;
-        }
-	}
-	for(uint8_t i=64; i<80; i++) //FILL
-	{
-		ARGB_SetRGB(i,primaryColour.r, primaryColour.g, primaryColour.b);
-		ARGB_SetWhite(i,primaryColour.w);
-	}
-	if(direction==0)
-	{
-        for(uint16_t i=63; i>63-step*4; i--) //DIRECTION
-        {
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-        }
-        for(uint16_t i=80; i<80+step*4; i++) //DIRECTION
-        {
-    		ARGB_SetRGB(i,secondaryColour.r, secondaryColour.g, secondaryColour.b);
-    		ARGB_SetWhite(i,secondaryColour.w);
-        }
-	}
-    if(direction==1)
+    if (step >= modifier)
     {
-        for(uint16_t i=3; i<3+step*4; i++) //DIRECTION
+        step = 0;
+        direction = !direction;
+    }
+
+    uint16_t mid_width = LEDCOUNT / 9;
+    if (mid_width == 0) mid_width = 1;
+
+    uint16_t mid_start = (LEDCOUNT - mid_width) / 2;
+    uint16_t mid_end   = mid_start + mid_width;
+    uint16_t wing_size = mid_start;
+
+    uint16_t limit = ((uint32_t)step * wing_size) / modifier;
+
+    for (uint16_t i = mid_start; i < mid_end; i++)
+    {
+        ARGB_SetRGB(i, primaryColour.r, primaryColour.g, primaryColour.b);
+        ARGB_SetWhite(i, primaryColour.w);
+    }
+
+    if (direction == 0)
+    {
+        for (uint16_t i = mid_start - limit; i < mid_start; i++)
         {
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
+            ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+            ARGB_SetWhite(i, secondaryColour.w);
         }
-        for(uint16_t i=140; i>140-step*4; i--) //DIRECTION
+        for (uint16_t i = mid_end; i < mid_end + limit; i++)
         {
-    		ARGB_SetRGB(i,0,0,0);
-    		ARGB_SetWhite(i,0);
+            ARGB_SetRGB(i, secondaryColour.r, secondaryColour.g, secondaryColour.b);
+            ARGB_SetWhite(i, secondaryColour.w);
         }
     }
-    ARGB_Show();
+    else
+    {
+        for (uint16_t i = 0; i < limit; i++)
+        {
+            ARGB_SetRGB(i, 0, 0, 0);
+            ARGB_SetWhite(i, 0);
+        }
+        for (uint16_t i = LEDCOUNT - limit; i < LEDCOUNT; i++)
+        {
+            ARGB_SetRGB(i, 0, 0, 0);
+            ARGB_SetWhite(i, 0);
+        }
+    }
 
+    ARGB_Show();
 }
 
 static void effect_order(void) //TUBE ORDER FOR SETUP
