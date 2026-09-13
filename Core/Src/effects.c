@@ -15,7 +15,7 @@
 #include "math.h"
 #include <stdlib.h> // Nutne pro funkci rand()
 
-#define LEDCOUNT 140
+#define LEDCOUNT 144
 #define MCU_CLOCK 72000000.0f
 #define MIX_EFFECTS 1 //If == 1; various effect can mix with each other when transitioning (only some of them supports this)
 //ToDo: Check all effects - thye were originally tested for MIX_EFFECTS 0
